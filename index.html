@@ -354,6 +354,7 @@ code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:
 
 <script src="keepsake.config.js"></script>
 <script src="bag-haptics.js"></script>
+<script src="tag-reader.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -639,12 +640,31 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.ble1"; // bump on every release (the service worker cache name follows it in sw.js)
-const tagUrl = (bag) => `${TAG_HOST}#v1.${bag.id}.${bag.key}`;
-function readTag(hash) {
-  const m = /^#?v1\.([A-Za-z0-9_-]{11})\.([A-Za-z0-9_-]{43})$/.exec(hash || "");
-  return m ? { bagId: m[1], key: m[2], at: Date.now() } : null;
+const BUILD = "2026-11-09.nfc1"; // bump on every release (the service worker cache name follows it in sw.js)
+const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+/* ---------- TagReader (tag-reader.js) ---------- */
+// LinkTags: any phone; the tag's link opens this page. Nfc: Chrome on Android reads and writes in place.
+const LinkTags = TagReader.LinkTagReader();
+const Nfc = TagReader.WebNfcTagReader();
+let nfcWroteAt = 0;
+function onNfcTag(tag) {
+  if (Date.now() - nfcWroteAt < 2500) return; // the tag we just wrote, still against the phone
+  onTagTap(tag);
 }
+async function startNfc(fromPress = false) {
+  if (!Nfc.canRead || Nfc.scanning) return Nfc.scanning;
+  if (!fromPress && (await Nfc.permission()) !== "granted") return false; // the first time needs a button press
+  const ok = await Nfc.start(onNfcTag, (msg) => toast(msg));
+  if (!ok && fromPress && Nfc.lastError) toast(Nfc.lastError);
+  if (S.data || S.view.name !== "home") render();
+  return ok;
+}
+/** How to hold the phone, for this phone. */
+const holdHow = () => IS_ANDROID
+  ? (Nfc.scanning ? "Hold the back of your phone flat against the tag inside the bag." : "Hold the back of your phone to the tag inside the bag, then open the link it shows.")
+  : "Hold the top edge of your iPhone to the tag inside the bag, then tap the banner that appears.";
 const tagMatches = (tag, bag) => !!tag && !!bag && tag.bagId === bag.id && tag.key === bag.key;
 function newBagKey() { return { id: b64url(crypto.getRandomValues(new Uint8Array(8))), key: b64url(crypto.getRandomValues(new Uint8Array(32))) }; }
 
@@ -666,12 +686,14 @@ function tagPrompt(label, small = false) {
   return `<div class="tag-prompt" role="status">
     <div class="deboss ${small ? "small" : ""} waiting" data-bag aria-hidden="true">${icons.nfc}</div>
     <b>${esc(label || "Tap your phone to the bag's tag")}</b>
-    <p class="muted small">Hold the top edge of your iPhone to the tag inside the bag, then tap the banner that appears.${S.data?.tagSeenAt || S.claimBag ? "" : " The tag isn't set up yet: see Settings &amp; privacy."}</p>
+    <p class="muted small">${holdHow()}${S.data?.tagSeenAt || S.claimBag ? "" : " The tag isn't set up yet: see Settings &amp; privacy."}</p>
+    ${Nfc.canRead && !Nfc.scanning ? `<button class="btn" data-action="nfc-listen">Read the tag with this phone</button>` : ""}
+    ${Nfc.scanning ? `<p class="small" style="margin:0">This phone is listening for the tag.</p>` : ""}
     <button class="link" data-action="sim-open">No tag with you? Use the virtual bag</button>
   </div>`;
 }
 function tapHint() {
-  return `<p class="muted small" style="text-align:center">With the real bag: hold the top of your iPhone to its tag, then tap the banner that appears.${S.data?.tagSeenAt || S.claimBag ? "" : " First set up the tag in Settings &amp; privacy."} Testing? Tap the circle instead.</p>`;
+  return `<p class="muted small" style="text-align:center">With the real bag: ${holdHow().replace(/^H/, "h")}${S.data?.tagSeenAt || S.claimBag ? "" : " First set up the tag in Settings &amp; privacy."} Testing? Tap the circle instead.</p>`;
 }
 
 /** Step-by-step for writing the bag's link with the NFC Tools app. */
@@ -679,14 +701,16 @@ function tagSetupBlock(bag) {
   const link = tagUrl(bag).replace(/^https:\/\//, "");
   return `<div class="local">
     <h3>Write the link onto your bag's tag</h3>
+    ${Nfc.canWrite ? `<button class="btn primary" data-action="nfc-write">Write the tag with this phone</button>
+    <p class="muted small" style="margin:0">Then hold the back of your phone flat against the tag until it says it's done. Or use NFC Tools:</p>` : ""}
     <ol class="steps">
       <li><button class="link" data-action="copy-tag" style="padding:0;min-height:0">Copy this bag's link</button></li>
       <li>Open <b>NFC Tools</b> → <b>Write</b> → <b>Add a record</b> → <b>URL / URI</b>.</li>
       <li>Leave the start set to <b>https://</b>, paste the link into the box, and tap <b>OK</b>.</li>
-      <li>Tap <b>Write</b>, then hold the top of your iPhone flat against the tag until it says it's done.</li>
+      <li>Tap <b>Write</b>, then hold ${IS_ANDROID ? "the back of your phone" : "the top of your iPhone"} flat against the tag until it says it's done.</li>
     </ol>
     <p class="mono" id="tagLink" style="font-size:12px">${esc(link)}</p>
-    <p class="muted small">Works with both your tags: the NTAG215 stickers and the NTAG 424 DNA. The link carries this bag's key, so the tag belongs inside the bag. Use Keepsake in Safari for this: the home-screen icon keeps its memories separately, and a tag tap always opens Safari.</p>
+    <p class="muted small">Works with both your tags: the NTAG215 stickers and the NTAG 424 DNA. The link carries this bag's key, so the tag belongs inside the bag. ${IS_ANDROID ? "Use Keepsake in Chrome for this: the home-screen icon may keep its memories separately." : "Use Keepsake in Safari for this: the home-screen icon keeps its memories separately, and a tag tap always opens Safari."}</p>
   </div>`;
 }
 
@@ -831,7 +855,8 @@ function bleStatusBlock(opts = {}) {
   else if (st === "connected") text = `Connected to ${name}.${RealBag.lastConnectMs != null ? ` Took ${(RealBag.lastConnectMs / 1000).toFixed(1)} s.` : ""}`;
   else { text = `${name} is remembered, but not connected right now.`; btn = `<button class="btn" data-action="ble-connect">Connect the bag</button>`; }
   const err = RealBag.lastError && st !== "connected" ? `<span class="small" style="color:var(--warn)">${esc(RealBag.lastError)}</span>` : "";
-  return `<div id="bleStatus" class="stack" role="status"><p class="small muted" style="margin:0">${text}</p>${err}${opts.noButton ? "" : btn}</div>`;
+  const iosNote = IS_IOS && RealBag.supported ? `<span class="small muted">On iPhone, tapping the tag opens Safari, and Safari can't reach the bag over Bluetooth. Memories saved in this browser open here with the virtual bag's Tap, or in Safari without the buzz.</span>` : "";
+  return `<div id="bleStatus" class="stack" role="status"><p class="small muted" style="margin:0">${text}</p>${err}${iosNote}${opts.noButton ? "" : btn}</div>`;
 }
 
 /* ---------- timing: tap-to-open and tap-to-buzz, kept on this phone only ---------- */
@@ -1889,6 +1914,20 @@ document.addEventListener("click", async (e) => {
     case "ble-fx": { const n = Math.round(+($("#simFx")?.value || 0)); S.sim.fx = n; return testBuzz(`fx:${n}`); }
     case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
     case "timing-clear": return Timing.clear();
+    case "nfc-listen": return startNfc(true);
+    case "nfc-write": {
+      const bag = S.claimBag || S.data?.bag; if (!bag) return;
+      toast("Hold the back of your phone flat against the tag…", 30000);
+      try { await Nfc.write(tagUrl(bag)); }
+      catch (err) { return toast(err.message || "The tag wasn't written. Try again."); }
+      nfcWroteAt = Date.now();
+      phoneHaptic(30);
+      toast("Written. This tag now opens this bag.");
+      if (S.data && !S.claimBag) { S.data.tagSeenAt = Date.now(); persist(); }
+      // Writing the tag means the phone touched it: that counts as the tap a claim is waiting for.
+      if (S.waitTap && S.claimBag) { const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve(true); return; }
+      return render();
+    }
     case "allow-location": await Loc.start(); if (Loc.status === "denied") toast("Location is off for Keepsake. Turn it on in your phone's Settings."); return render();
     case "ob-allow": { const st = await Loc.start(); if (st === "denied") toast("No problem. You can turn location on later in Settings."); return obStep("bag"); }
     case "ob-example": return finishOnboarding(await makeExample(S.ob.name));
@@ -2005,7 +2044,8 @@ $("#clasp").addEventListener("click", (e) => { e.stopPropagation(); Bag.pressCla
 $("#simOpen").addEventListener("click", () => { $("#sim").removeAttribute("data-closed"); $("#sim").querySelector("button")?.focus(); });
 setInterval(() => { if (Date.now() - S.sim.lastBuzz < 1500) renderSim(); }, 500);
 window.addEventListener("pagehide", () => S.opened.clear()); // memories close again when you leave
-window.addEventListener("hashchange", () => { const t = readTag(location.hash); if (t) onTagTap(t); });
+LinkTags.start(onTagTap); // the tag's link opened in this tab (iPhone sometimes reuses the tab)
+document.addEventListener("visibilitychange", () => { if (!document.hidden) startNfc(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && S.view.name === "memory") { const m = S.data?.memories.find((x) => x.id === S.view.id); if (m) { closeMemory(m); render(); } } });
 
 /* ---------- boot ---------- */
@@ -2030,8 +2070,8 @@ function retireTab() {
   if (!Native) tabs?.postMessage({ type: "newest", id: TAB_ID });
   renderSim();
   const saved = await loadState();
-  const tag = readTag(location.hash);
-  if (tag) tag.tapAt = 0; // this page was opened by the tap: count from the moment Safari/Chrome started loading it
+  const tag = LinkTags.initial(); // this page was opened by a tag tap: its time counts from navigation start
+  startNfc(); // Chrome on Android, once NFC was allowed: read the tag in place from now on
   if (!saved?.onboarded || !saved.bag?.id) {
     // First launch: get to know the person before handing them a bag.
     Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
