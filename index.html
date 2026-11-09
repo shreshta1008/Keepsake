@@ -645,7 +645,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.loc1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-09.ble3"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -755,7 +755,7 @@ async function checkArrival() {
 function showArrival(m) {
   const el = $("#arrival");
   el.innerHTML = `<div class="ring" data-bag aria-hidden="true">${icons.nfc}</div>
-    <div><b>Your bag is buzzing.</b><span class="small">${poss(m.author)} memory waits here, at ${esc(m.place.name)}. Tap your phone to the bag's tag to open it.</span></div>
+    <div><b>${buzzWords()}</b><span class="small">${poss(m.author)} memory waits here, at ${esc(m.place.name)}. Tap your phone to the bag's tag to open it.${bagLinkNote()}</span></div>
     <div class="actions"><button class="link" data-action="arrival-later">Not now</button></div>`;
   el.hidden = false;
   if (!reduceMotion()) el.animate([{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], { duration: 500, easing: EASE });
@@ -850,6 +850,14 @@ const realBagPaired = () => RealBag.supported && RealBag.state !== "unpaired" &&
 function renderSimQuietly() { const a = document.activeElement; if (a && $("#sim")?.contains(a) && a.matches("input, select")) return; renderSim(); }
 RealBag.onChange(() => { renderSimQuietly(); const el = $("#bleStatus"); if (el) el.outerHTML = bleStatusBlock(); });
 
+/** Only say the bag is buzzing when a real bag is paired; otherwise say what's true. */
+function buzzWords() { return realBagPaired() ? "Your bag is buzzing." : "A memory waits here."; }
+function bagLinkNote() {
+  if (realBagPaired()) return "";
+  return RealBag.supported
+    ? ` <b style="font:inherit;display:inline">Your bag isn't paired, so it can't buzz.</b> Pair it in Settings &amp; privacy.`
+    : ` <b style="font:inherit;display:inline">This browser can't reach your bag over Bluetooth</b>, so it can't buzz. ${IS_IOS ? "On iPhone, open Keepsake in the Bluefy browser." : "Open Keepsake in Chrome."}`;
+}
 /** What the bag's Bluetooth link is doing, in words, with the one button that helps. */
 function bleStatusBlock(opts = {}) {
   const st = RealBag.state, name = esc(RealBag.deviceName || CONFIG.bag.name);
@@ -1119,6 +1127,12 @@ function viewHome() {
       <p class="small">Write this bag's link onto the NFC tag inside it, once. Then tapping the bag with your iPhone opens Keepsake, and opens the memory that waits where you're standing.</p>
       <button class="btn" data-action="tag-open">Set up the tag</button>
     </section>`;
+  if (!realBagPaired()) html += `<section class="pocket stack" aria-label="Your bag's buzzer">
+      <div class="chapter-head"><h3>Connect your bag's buzzer</h3><span class="muted small">Bluetooth</span></div>
+      ${RealBag.supported
+        ? `<p class="small">Switch on the bag, keep it close, and pair it once. Then it buzzes when you reach a memory and when one opens.</p>${bleStatusBlock()}`
+        : `<p class="small">This browser can't use Bluetooth, so the bag can't buzz from here; buzzes only show on screen. ${IS_IOS ? "On iPhone, Safari and Chrome both lack Bluetooth: open this page in the free <b>Bluefy</b> browser instead." : "Open this page in <b>Chrome</b> instead."}</p>`}
+    </section>`;
   html += `<button class="btn primary" data-go="save">Save a memory</button>`;
   if (memories.length) html += `<button class="btn" data-go="map">See where they wait</button>`;
   html += `<hr class="stitch"><div class="chapters">`;
@@ -1209,7 +1223,7 @@ function viewMemory() {
     const status = m.armed === false
       ? (c.inside ? "Sealed here just now. It opens when you come back: leave this place, then return." : `Sealed. It opens when you're back at ${esc(m.place.name)}. You're ${fmtDist(c.dist)} away.`)
       : !c.known ? "Finding where you are…"
-      : c.inside ? "You're here. Your bag is buzzing: tap your phone to its tag to open this."
+      : c.inside ? `You're here. ${buzzWords()} Tap your phone to its tag to open this.`
       : `This opens at ${esc(m.place.name)}. You're ${fmtDist(c.dist)} away.`;
     h += `<div class="memory-card"><div class="locked">
         <div class="lock-ring" data-bag>${icons[m.kind].replace("<svg", '<svg width="34" height="34" style="stroke:var(--primary);fill:none;stroke-width:1.6"')}</div>
