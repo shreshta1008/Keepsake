@@ -504,6 +504,11 @@ const Loc = {
         this.status = r?.granted ? "on" : "denied";
       } else if (navigator.geolocation) {
         await new Promise((resolve) => {
+          // Fast first answer: the phone's recent position (under a minute old) usually comes back at once,
+          // so a tag tap doesn't wait for a fresh GPS fix. The watch below refines it within seconds.
+          navigator.geolocation.getCurrentPosition(
+            (pos) => { if (!this.fix) { this.status = "on"; this.update(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy); resolve(); } },
+            () => {}, { enableHighAccuracy: false, maximumAge: 60000, timeout: 4000 });
           this.watchId = navigator.geolocation.watchPosition(
             (pos) => { this.status = "on"; this.update(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy); resolve(); },
             (err) => { if (!this.fix) this.status = err.code === 1 ? "denied" : "unavailable"; resolve(); },
@@ -640,7 +645,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.ble2"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-09.loc1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -790,7 +795,7 @@ async function onTagTap(tag) {
   if (!tagMatches(tag, S.data.bag)) { toast("This tag belongs to a different bag."); return; }
   S.data.tagSeenAt = Date.now(); persist();
   S.preTapped = { at: Date.now() };
-  bagFace(); if (!Bag.isOpen) await Bag.open();
+  bagFace(); if (!Bag.isOpen) await Bag.open({ quick: true });
   if (pend?.type === "seal") {
     const d = pend.draft;
     if (d.media) d.mediaUrl = URL.createObjectURL(new Blob([d.media], { type: d.mime || "application/octet-stream" }));
@@ -915,11 +920,12 @@ const Bag = {
   /** Resolves when someone presses the clasp. */
   waitForClasp() { $("#clasp").classList.add("ready"); $("#clasp").focus({ preventScroll: true }); return new Promise((r) => (this.waiter = r)); },
   pressClasp() { const w = this.waiter; this.waiter = null; $("#clasp").classList.remove("ready"); w ? w() : this.open(); },
-  async open() {
+  /** quick: a short fade instead of the flap, for tag taps, where every second counts. */
+  async open({ quick = false } = {}) {
     if (this.isOpen) return;
     const bag = this.el, flap = $(".bag-flap"), body = $(".bag-body"), clasp = $("#clasp"), hint = $("#bagHint"), shell = $("#shell");
     phoneHaptic(20);
-    if (reduceMotion()) {
+    if (reduceMotion() || quick) {
       await this.play(bag, [{ opacity: 1 }, { opacity: 0 }], { duration: 250 });
     } else {
       bag.style.background = "transparent";
