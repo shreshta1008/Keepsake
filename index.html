@@ -640,7 +640,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.nfc2"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-09.ble2"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1083,6 +1083,7 @@ function viewClaim() {
     </div>
     ${bleStatusBlock({ noButton: true })}
     <button class="btn primary" data-action="ble-pair">Find my bag</button>
+    <button class="link" data-action="ble-pair-all" style="align-self:center">Bag not in the list? Show every nearby device</button>
     <button class="link" data-action="claim-skip-ble" style="align-self:center">Not now: use the virtual bag</button>`;
   return `
     <div class="stack" style="padding-top:24px">
@@ -1687,6 +1688,7 @@ function renderSim() {
     <div class="row"><input id="simFx" type="number" min="1" max="123" step="1" inputmode="numeric" value="${S.sim.fx || 47}" aria-label="DRV2605L effect number, 1 to 123" style="min-height:48px;font:inherit;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 10px;width:100%"><button class="btn" data-action="ble-fx">Send fx</button></div>
     <p class="small muted" style="margin:0">${realBagPaired() ? `Test commands go to ${esc(RealBag.deviceName || CONFIG.bag.name)}.` : "No real bag paired: test commands buzz the virtual bag."}</p>
     ${realBagPaired() ? `<button class="link" data-action="ble-forget" style="align-self:start">Forget this bag</button>` : ""}
+    ${RealBag.supported ? `<button class="link" data-action="ble-pair-all" style="align-self:start">Bag not in the list? Show every nearby device</button>` : ""}
     <hr class="stitch">
     <h3 style="font-size:22px">Timing</h3>
     ${timingBlock()}
@@ -1904,11 +1906,16 @@ document.addEventListener("click", async (e) => {
     case "tap": return tapBag();
     case "ble-pair": { // must stay the first thing this click does: the browser only shows its chooser for a fresh press
       const ok = await RealBag.pair();
-      if (!ok) { if (RealBag.lastError) toast(RealBag.lastError); return; }
+      if (!ok) { if (RealBag.lastError) toast(RealBag.lastError, 6000); return; }
       toast(`Found ${RealBag.deviceName || CONFIG.bag.name}. It will buzz when a memory opens.`);
       await boop("claim");
       if (S.view.name === "claim" && S.view.step === "buzzer") S.view.step = "intro";
       return render();
+    }
+    case "ble-pair-all": { // troubleshooting: the chooser lists everything, the app then checks for the Keepsake service
+      const ok = await RealBag.pair({ showAll: true });
+      if (!ok) { if (RealBag.lastError) toast(RealBag.lastError, 6000); return; }
+      toast(`Found ${RealBag.deviceName || CONFIG.bag.name}.`); await boop("claim"); return render();
     }
     case "claim-skip-ble": await boop("claim"); S.view.step = "intro"; return render();
     case "ble-connect": {

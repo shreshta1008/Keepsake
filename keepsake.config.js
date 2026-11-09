@@ -4,6 +4,8 @@ window.KEEPSAKE_CONFIG = Object.freeze({
   bag: {
     // Bluetooth name the ESP32-S3 advertises. A working name: change it here only.
     name: "Keepsake Bag",
+    // Also match any device whose name starts with one of these (Bluetooth names are case-sensitive).
+    namePrefixes: ["Keepsake", "keepsake", "KEEPSAKE"],
     serviceUuid: "6e1a0001-4b6f-4d8e-9a53-0c2f6b7a1e10",
     // Write characteristic. Commands are plain text: "tap" (double tap), "single", "strong", "fx:<1-123>".
     commandUuid: "6e1a0002-4b6f-4d8e-9a53-0c2f6b7a1e10",

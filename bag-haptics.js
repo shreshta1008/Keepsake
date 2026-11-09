@@ -86,28 +86,36 @@
       const t0 = now();
       set("connecting");
       const server = await withTimeout(device.gatt.connect(), 10000, "Connecting to the bag");
-      const svc = await withTimeout(server.getPrimaryService(CFG.serviceUuid), 5000, "Finding the bag's service");
-      ch = await withTimeout(svc.getCharacteristic(CFG.commandUuid), 5000, "Finding the buzz command");
+      let svc;
+      try { svc = await withTimeout(server.getPrimaryService(CFG.serviceUuid), 5000, "Finding the bag's service"); }
+      catch (e) { try { device.gatt.disconnect(); } catch {} throw new Error(`“${device.name || "That device"}” doesn't have the Keepsake service (${CFG.serviceUuid.slice(0, 8)}…). Pick the bag, or check the firmware's service ID.`); }
+      try { ch = await withTimeout(svc.getCharacteristic(CFG.commandUuid), 5000, "Finding the buzz command"); }
+      catch (e) { try { device.gatt.disconnect(); } catch {} throw new Error(`The bag has the Keepsake service but not the buzz characteristic (${CFG.commandUuid.slice(0, 8)}…). Check the firmware.`); }
       self.lastConnectMs = Math.round(now() - t0);
       set("connected", "");
       return true;
     }
 
-    /** Ask the browser for the bag. Must run inside a button press. */
-    self.pair = async () => {
+    /** Ask the browser for the bag. Must run inside a button press.
+        showAll: list every nearby Bluetooth device (for when the bag's name or advertisement doesn't match). */
+    self.pair = async ({ showAll = false } = {}) => {
       if (!self.supported) return false;
       try {
-        const d = await bt.requestDevice({
-          // The 128-bit service ID and the name may not both fit in one advertisement, so match either.
-          filters: [{ services: [CFG.serviceUuid] }, { name: CFG.name }],
-          optionalServices: [CFG.serviceUuid],
-        });
+        const d = await bt.requestDevice(showAll
+          ? { acceptAllDevices: true, optionalServices: [CFG.serviceUuid] }
+          : {
+            // The 128-bit service ID and the name may not both fit in one advertisement, so match any of them.
+            filters: [{ services: [CFG.serviceUuid] }, { name: CFG.name }, ...(CFG.namePrefixes || []).map((p) => ({ namePrefix: p }))],
+            optionalServices: [CFG.serviceUuid],
+          });
+        await attach(d); // remember it only once it has proved to be a Keepsake bag
         try { localStorage.setItem(REMEMBER, JSON.stringify({ id: d.id, name: d.name || CFG.name, pairedAt: Date.now() })); } catch {}
         self.deviceName = d.name || CFG.name;
-        await attach(d);
+        set("connected", "");
         return true;
       } catch (e) {
         // NotFoundError = the person closed the chooser.
+        if (!remembered()) { device = null; ch = null; }
         set(remembered() ? "paired" : "unpaired", e?.name === "NotFoundError" ? "" : String(e?.message || e));
         return false;
       }

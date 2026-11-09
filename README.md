@@ -64,7 +64,7 @@ All in `keepsake.config.js`:
 - `bag.commandUuid`: `6e1a0002-4b6f-4d8e-9a53-0c2f6b7a1e10` (write; plain text `tap`, `single`, `strong`, `fx:1`…`fx:123`)
 - `buzz`: open → `tap`, arrival → `strong`, seal / pass / reply / claim → `single`.
 
-The chooser matches the bag by service ID **or** by name, because a 128-bit service ID and the name together may not fit in one Bluetooth advertisement.
+The chooser matches the bag by service ID, by the exact name, **or** by any name starting with `Keepsake`/`keepsake`/`KEEPSAKE` (`namePrefixes`), because many ESP32 sketches advertise only the name. If the bag still isn't listed, **Show every nearby device** lists everything; the app then checks the device really has the Keepsake service and says so if it doesn't.
 
 The tag holds one NDEF URL record: `https://<host>/#v1.<bagId>.<key>`. The bag ID is 11 characters and the key 43 (base64url), about 90 bytes in all, which fits easily on an NTAG215 (504 bytes). Everything after `#` stays on the phone. NTAG424 DNA is not implemented yet: it would be a third `TagReader` that also checks the tag's signed code.
 
