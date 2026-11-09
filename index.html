@@ -352,6 +352,8 @@ code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:
 <div id="arrival" class="arrival" role="alert" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
+<script src="keepsake.config.js"></script>
+<script src="bag-haptics.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -634,8 +636,10 @@ async function toggleRecording() {
 // An iPhone reads it with no app open and offers to open it in Safari. So a real tap
 // arrives as Keepsake loading with that link. Anything the person was in the middle of
 // (sealing, opening, passing down, claiming) is saved first and carried on after the tap.
-const TAG_HOST = "https://keepsake-bag.expo.app/";
-const BUILD = "2026-10-21.563328"; // replaced by build-app.mjs with the build's date and version
+const CONFIG = window.KEEPSAKE_CONFIG;
+// Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
+const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
+const BUILD = "2026-11-09.ble1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => `${TAG_HOST}#v1.${bag.id}.${bag.key}`;
 function readTag(hash) {
   const m = /^#?v1\.([A-Za-z0-9_-]{11})\.([A-Za-z0-9_-]{43})$/.exec(hash || "");
@@ -714,8 +718,8 @@ async function checkArrival() {
   const m = arrivalHere();
   if (!m || announced.get() === m.id || S.waitTap || S.preTapped) return; // a tag tap is already opening it
   announced.set(m.id);
-  // The bag buzzes first (its motor, over Bluetooth, in the iPhone app; on screen here). That's the cue to tap.
-  await boop();
+  // The bag buzzes first (its motor, over Bluetooth, once paired; on screen otherwise). That's the cue to tap.
+  await boop("arrival");
   showArrival(m);
   if (S.view.name === "home" || S.view.name === "memory") render();
 }
@@ -741,6 +745,8 @@ async function openHere() {
 /** Keepsake was opened by tapping a real tag. */
 async function onTagTap(tag) {
   history.replaceState(null, "", location.pathname + location.search); // the key shouldn't sit in the address bar
+  Timing.markTap(tag.via || "tag link", tag.tapAt ?? performance.now());
+  if (realBagPaired()) RealBag.connect(); // start the radio now: a memory may open in a moment
   // Already open and waiting for a tap (iPhone reused this tab): that's the tap.
   if (S.waitTap && (tagMatches(tag, S.data?.bag) || tagMatches(tag, S.claimBag))) {
     const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve(true);
@@ -787,6 +793,7 @@ function waitForTap(label, pending) {
   return new Promise((resolve) => { S.waitTap = { label, resolve }; renderSim(); render(); });
 }
 function tapBag() {
+  Timing.markTap("virtual");
   // No flow waiting: a simulated tap behaves like tapping the real tag here.
   if (!S.waitTap) { if (S.data) { S.preTapped = { at: Date.now() }; closeSimOnPhone(); openHere(); } return; }
   const w = S.waitTap; S.waitTap = null;
@@ -794,13 +801,72 @@ function tapBag() {
   renderSim(); clearPending(); w.resolve(true);
   closeSimOnPhone();
 }
+/** A test buzz from the Virtual bag panel or Settings: real bag when paired, virtual otherwise. */
+async function testBuzz(cmd) {
+  if (!BagHaptics.validCommand(cmd)) return toast("Effects run from 1 to 123.");
+  if (!realBagPaired()) return sendBuzz(cmd);
+  const r = await RealBag.buzz(cmd);
+  Timing.add("bag write", r.ms, `test “${cmd}”${r.ok ? "" : `: ${r.error}`}`);
+  toast(r.ok ? `Sent “${cmd}” in ${(r.ms / 1000).toFixed(2)} s. Did the bag buzz?` : `The bag didn't buzz: ${r.error}`);
+}
 function closeSimOnPhone() { if (matchMedia("(max-width: 899px)").matches) $("#sim").setAttribute("data-closed", ""); }
 function cancelTap() { const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w?.resolve(false); }
-async function boop() {
-  // Real app: BLE write to the ESP32 (cold ~1 s, warm ~60 ms). Here: animate the virtual bag.
+/* ---------- the bag's buzz: BagHaptics (bag-haptics.js) ---------- */
+// Real: Web Bluetooth to the ESP32-S3, once a bag is paired. Simulated: the Virtual bag panel.
+const RealBag = BagHaptics.BluetoothBagHaptics();
+const SimBag = BagHaptics.SimulatedBagHaptics({ isPowered: () => S.sim.powered });
+/** True once a real bag has been paired on this phone (connected or not). */
+const realBagPaired = () => RealBag.supported && RealBag.state !== "unpaired" && RealBag.state !== "unsupported";
+/** Re-render the Virtual bag panel, unless someone is typing in it. */
+function renderSimQuietly() { const a = document.activeElement; if (a && $("#sim")?.contains(a) && a.matches("input, select")) return; renderSim(); }
+RealBag.onChange(() => { renderSimQuietly(); const el = $("#bleStatus"); if (el) el.outerHTML = bleStatusBlock(); });
+
+/** What the bag's Bluetooth link is doing, in words, with the one button that helps. */
+function bleStatusBlock(opts = {}) {
+  const st = RealBag.state, name = esc(RealBag.deviceName || CONFIG.bag.name);
+  let text, btn = "";
+  if (st === "unsupported") text = "This browser can't use Bluetooth, so the bag's buzz shows on screen only. Bluetooth works in Chrome on Android, and on iPhone in the Bluefy browser.";
+  else if (st === "unpaired") { text = `No bag paired on this phone yet. Buzzes show on screen only.`; btn = `<button class="btn" data-action="ble-pair">Find my bag</button>`; }
+  else if (st === "connecting") text = `Connecting to ${name}…`;
+  else if (st === "connected") text = `Connected to ${name}.${RealBag.lastConnectMs != null ? ` Took ${(RealBag.lastConnectMs / 1000).toFixed(1)} s.` : ""}`;
+  else { text = `${name} is remembered, but not connected right now.`; btn = `<button class="btn" data-action="ble-connect">Connect the bag</button>`; }
+  const err = RealBag.lastError && st !== "connected" ? `<span class="small" style="color:var(--warn)">${esc(RealBag.lastError)}</span>` : "";
+  return `<div id="bleStatus" class="stack" role="status"><p class="small muted" style="margin:0">${text}</p>${err}${opts.noButton ? "" : btn}</div>`;
+}
+
+/* ---------- timing: tap-to-open and tap-to-buzz, kept on this phone only ---------- */
+const Timing = {
+  list: (() => { try { return JSON.parse(localStorage.getItem("keepsake.timing") || "[]"); } catch { return []; } })(),
+  tapAt: null,      // performance.now() of the last tag tap (0 = this page was opened by the tap)
+  tapVia: "",       // "tag link" | "web nfc" | "virtual"
+  add(kind, ms, note = "") {
+    this.list.unshift({ kind, ms: Math.round(ms), note, at: Date.now() });
+    this.list.length = Math.min(this.list.length, 20);
+    try { localStorage.setItem("keepsake.timing", JSON.stringify(this.list)); } catch {}
+    renderSimQuietly();
+  },
+  clear() { this.list = []; try { localStorage.removeItem("keepsake.timing"); } catch {} renderSim(); },
+  markTap(via, at = performance.now()) { this.tapAt = at; this.tapVia = via; },
+  take() { const t = { at: this.tapAt, via: this.tapVia }; this.tapAt = null; return t; },
+};
+
+/** The moment's buzz (see CONFIG.buzz). `tap` is the tag tap that led here, for timing. */
+function boop(event = "open", tap = null) { return sendBuzz(CONFIG.buzz[event] || "tap", tap); }
+async function sendBuzz(cmd, tap = null) {
   phoneHaptic();
-  if (!S.sim.powered) { toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
-  await sleep(250);
+  if (realBagPaired()) {
+    // Don't hold the screen for the radio: the memory shows while the command travels.
+    RealBag.buzz(cmd).then((r) => {
+      if (tap && tap.at != null) Timing.add("tap→buzz", performance.now() - tap.at, `${tap.via}, “${cmd}”${r.ok ? "" : ", failed"}`);
+      Timing.add("bag write", r.ms, `“${cmd}”${r.ok ? "" : `: ${r.error}`}`);
+      if (!r.ok) toast(`The bag didn't buzz: ${r.error}`);
+    });
+  } else {
+    const r = await SimBag.buzz(cmd);
+    if (!r.ok) { toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
+    if (tap && tap.at != null) Timing.add("tap→buzz", performance.now() - tap.at, `${tap.via}, virtual bag`);
+  }
+  if (realBagPaired()) await sleep(250);
   S.sim.lastBuzz = Date.now(); renderSim();
   for (const el of document.querySelectorAll("[data-bag]")) { el.classList.remove("buzz"); void el.offsetWidth; el.classList.add("buzz"); }
 }
@@ -859,9 +925,9 @@ const Bag = {
     bag.style.background = ""; this.clear();
   },
   /** The clasp snaps shut: the moment the bag boops. */
-  async snap() {
+  async snap(event = "seal") {
     if (!reduceMotion()) await finished($("#clasp").animate([{ transform: "scale(1)" }, { transform: "scale(.84)" }, { transform: "scale(1.04)" }, { transform: "scale(1)" }], { duration: 360, easing: EASE }), { duration: 360 });
-    await boop();
+    await boop(event);
   },
   /** Hand the closed bag to someone else: it slides away and a "new" bag slides in. */
   async handOver() {
@@ -983,6 +1049,16 @@ function viewClaim() {
       ${S.ob.name ? "" : `<div><label for="ownerName">Your name</label><input id="ownerName" type="text" value="" placeholder="The first chapter is yours" autocomplete="off"></div>`}
     </div>
     <button class="btn primary" data-action="claim-name">Continue</button>`;
+  if (step === "buzzer") return `
+    <div class="stack" style="padding-top:24px">
+      <span class="eyebrow">Your bag</span>
+      <h2>Let the bag buzz.</h2>
+      <p>Switch on the bag's haptic module and keep it close. Your phone looks for “${esc(CONFIG.bag.name)}” over Bluetooth and remembers it, so the bag can buzz when a memory opens.</p>
+      <p class="muted small">Only the buzz goes over Bluetooth. The bag's key stays on its tag and on this phone.</p>
+    </div>
+    ${bleStatusBlock({ noButton: true })}
+    <button class="btn primary" data-action="ble-pair">Find my bag</button>
+    <button class="link" data-action="claim-skip-ble" style="align-self:center">Not now: use the virtual bag</button>`;
   return `
     <div class="stack" style="padding-top:24px">
       <span class="eyebrow">How it works</span>
@@ -1110,6 +1186,7 @@ function viewMemory() {
       </div></div>`;
     if (S.waitTap) h += tagPrompt(S.waitTap.label);
     else if (c.inside && m.armed !== false) h += tagPrompt("Tap your phone to the bag's tag to open it");
+    if (realBagPaired() && RealBag.state !== "connected") h += bleStatusBlock();
     if (S.view.notHere) h += `<div class="notice bad" role="alert">${S.view.notHere === "unarmed" ? "This memory was sealed here a moment ago. It stays closed until you've left and come back." : S.view.notHere === "unknown" ? "Keepsake doesn't know where you are yet. Check that location is on, then try again." : `Not here yet. This memory opens within ${m.radius} m of ${esc(m.place.name)}, and you're ${fmtDist(c.dist)} away.`}</div>`;
     return h;
   }
@@ -1180,8 +1257,14 @@ function viewPrivacy() {
       ${S.view.tagSetup ? tagSetupBlock(S.data.bag) : ""}
     </div>
     <hr class="stitch">
+    <div class="stack">
+      <h3>Your bag's buzzer</h3>
+      ${bleStatusBlock()}
+      ${realBagPaired() ? `<div class="row"><button class="btn" data-action="ble-test" data-cmd="${esc(CONFIG.buzz.open)}">Test the buzz</button><button class="btn" data-action="ble-forget">Forget this bag</button></div>` : ""}
+    </div>
+    <hr class="stitch">
     <div>
-      <div class="kv"><b>In the bag</b><span>The bag's ID and its key. Nothing else. No battery, no tracking.</span></div>
+      <div class="kv"><b>In the bag</b><span>On its tag: the bag's ID and its key. Nothing else, and no tracking. Its buzzer only receives buzz commands over Bluetooth; the key never goes to it.</span></div>
       <div class="kv"><b>On this phone</b><span>${memories.length} sealed memor${memories.length === 1 ? "y" : "ies"} (${(bytes / 1024).toFixed(1)} KB), encrypted with AES-256. In this prototype they're stored in this browser only.</span></div>
       <div class="kv"><b>Your location</b><span>Used only while the app is open, to seal a memory to a spot and to check you're back there. It isn't stored or sent anywhere${window.ReactNativeWebView ? ", except to Apple Maps once per memory to suggest the place's name" : ""}.</span></div>
       <div class="kv"><b>In the cloud</b><span>Nothing yet. When sync arrives it will hold only the sealed files, never the key.</span></div>
@@ -1197,7 +1280,7 @@ function viewPrivacy() {
       <div class="row"><button class="btn primary" data-action="delete-yes" style="background:var(--warn);border-color:var(--warn)">Delete everything</button><button class="btn" data-action="delete-no">Keep them</button></div></div>`;
   } else {
     h += `<div class="row"><button class="btn" data-action="new-bag">Start with a new bag</button><button class="btn" data-action="delete">Delete everything</button></div>`;
-    h += `<p class="muted small" style="text-align:center">Keepsake web · version ${BUILD.startsWith("__") ? "preview" : BUILD} · with NFC tags</p>`;
+    h += `<p class="muted small" style="text-align:center">Keepsake web · version ${BUILD.startsWith("__") ? "preview" : BUILD} · with NFC tags and Bluetooth</p>`;
   }
   return h;
 }
@@ -1523,6 +1606,7 @@ function render() {
   app.innerHTML = v === "welcome" ? viewWelcome() : v === "claim" ? viewClaim() : !S.data ? "" : v === "map" ? viewMap() : v === "save" ? viewSave() : v === "memory" ? viewMemory() : v === "pass" ? viewPass() : v === "privacy" ? viewPrivacy() : viewHome();
   wireHolds();
   if (v === "map") Globe.mount($("#globe")); else Globe.unmount();
+  if (v === "memory" && realBagPaired() && RealBag.state === "paired" && !RealBag.needsTap) RealBag.connect();
   S.justSealed = null; S.justPassed = false; S.growLate = false;
   if (S.view.reveal) S.view.reveal = false;
 }
@@ -1563,8 +1647,30 @@ function renderSim() {
     <hr class="stitch">
     <label class="toggle">Phone near the bag <input id="simNear" type="checkbox" ${S.sim.near ? "checked" : ""}></label>
     <label class="toggle">Haptic module powered <input id="simPowered" type="checkbox" ${S.sim.powered ? "checked" : ""}></label>
+    <p class="small muted" style="margin:0">${realBagPaired() ? "A real bag is paired, so buzzes go to it; this switch only affects the virtual bag." : "Applies to the virtual bag."}</p>
+    <hr class="stitch">
+    <h3 style="font-size:22px">Real bag (Bluetooth)</h3>
+    ${bleStatusBlock().replace(' id="bleStatus"', "")}
+    <div class="row">${["tap", "single", "strong"].map((c) => `<button class="btn" data-action="ble-test" data-cmd="${c}">${c}</button>`).join("")}</div>
+    <div class="row"><input id="simFx" type="number" min="1" max="123" step="1" inputmode="numeric" value="${S.sim.fx || 47}" aria-label="DRV2605L effect number, 1 to 123" style="min-height:48px;font:inherit;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 10px;width:100%"><button class="btn" data-action="ble-fx">Send fx</button></div>
+    <p class="small muted" style="margin:0">${realBagPaired() ? `Test commands go to ${esc(RealBag.deviceName || CONFIG.bag.name)}.` : "No real bag paired: test commands buzz the virtual bag."}</p>
+    ${realBagPaired() ? `<button class="link" data-action="ble-forget" style="align-self:start">Forget this bag</button>` : ""}
+    <hr class="stitch">
+    <h3 style="font-size:22px">Timing</h3>
+    ${timingBlock()}
     <hr class="stitch">
     <button class="btn" data-action="reset-example">Reload the example bag</button>`;
+}
+/** The last measurements against the MVP specs. Stays in this browser; never sent anywhere. */
+function timingBlock() {
+  if (!Timing.list.length) return `<p class="small muted" style="margin:0">Tap the tag (or the virtual bag) to open a memory, and the times show here.</p>`;
+  const spec = { "tap→open": CONFIG.specs.tapToOpenMs, "tap→buzz": CONFIG.specs.tapToBuzzMs };
+  return `<ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">${Timing.list.slice(0, 8).map((t) => {
+    const lim = spec[t.kind], ok = lim == null ? null : t.ms <= lim;
+    return `<li><b>${esc(t.kind)}</b> ${(t.ms / 1000).toFixed(2)} s${lim ? ` <span style="color:var(${ok ? "--ok" : "--warn"})">${ok ? "within" : "over"} ${lim / 1000} s</span>` : ""}<br><span class="muted">${esc(t.note)}</span></li>`;
+  }).join("")}</ul>
+  <p class="small muted" style="margin:0">A page opened by the tag counts from when the browser started loading it, so it leaves out the banner tap on iPhone: time that part with a stopwatch.</p>
+  <button class="link" data-action="timing-clear" style="align-self:start">Clear the times</button>`;
 }
 
 /* ---------- press-and-hold ---------- */
@@ -1614,7 +1720,7 @@ async function doPass(named) {
   if (!(await waitForTap(`${name}, tap your phone to the bag's tag`, { type: "pass", next: name }))) { render(); return; }
   const from = currentOwner().name;
   await Bag.close(`${from} hands the bag to ${name}`);
-  await Bag.snap();
+  await Bag.snap("pass");
   await sleep(500);
   await Bag.handOver();
   S.data.owners.push({ gen: currentOwner().gen + 1, name, since: Date.now() });
@@ -1627,6 +1733,7 @@ async function doPass(named) {
 }
 async function openMemory(m, viaHome) {
   if (!(await waitForTap("Tap your phone to the bag's tag to open it", { type: "open", id: m.id, viaHome }))) { render(); return; }
+  const tap = Timing.take();
   const c = placeCheck(m);
   if (!c.known) { if (viaHome) { toast("Keepsake doesn't know where you are yet. Check that location is on."); render(); return; } S.view.notHere = "unknown"; render(); return; }
   if (!c.inside || m.armed === false) {
@@ -1635,8 +1742,9 @@ async function openMemory(m, viaHome) {
   }
   await decryptInto(m);
   hideArrival();
-  await boop();
+  await boop("open", tap);
   S.view = { name: "memory", id: m.id, reveal: true, from: S.view.name === "map" ? "map" : "home" }; render();
+  if (tap.at != null) Timing.add("tap→open", performance.now() - tap.at, tap.via);
 }
 async function decryptInto(m) {
   for (const item of [m, ...m.responses]) {
@@ -1762,6 +1870,25 @@ document.addEventListener("click", async (e) => {
   if (a.pick) return document.getElementById(a.pick).click();
   switch (a.action) {
     case "tap": return tapBag();
+    case "ble-pair": { // must stay the first thing this click does: the browser only shows its chooser for a fresh press
+      const ok = await RealBag.pair();
+      if (!ok) { if (RealBag.lastError) toast(RealBag.lastError); return; }
+      toast(`Found ${RealBag.deviceName || CONFIG.bag.name}. It will buzz when a memory opens.`);
+      await boop("claim");
+      if (S.view.name === "claim" && S.view.step === "buzzer") S.view.step = "intro";
+      return render();
+    }
+    case "claim-skip-ble": await boop("claim"); S.view.step = "intro"; return render();
+    case "ble-connect": {
+      if (RealBag.needsTap) { const ok = await RealBag.pair(); if (!ok && RealBag.lastError) toast(RealBag.lastError); return; }
+      const ok = await RealBag.connect();
+      if (!ok) toast(RealBag.lastError || "Couldn't reach the bag. Is it on and close by?");
+      return;
+    }
+    case "ble-test": return testBuzz(a.cmd);
+    case "ble-fx": { const n = Math.round(+($("#simFx")?.value || 0)); S.sim.fx = n; return testBuzz(`fx:${n}`); }
+    case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
+    case "timing-clear": return Timing.clear();
     case "allow-location": await Loc.start(); if (Loc.status === "denied") toast("Location is off for Keepsake. Turn it on in your phone's Settings."); return render();
     case "ob-allow": { const st = await Loc.start(); if (st === "denied") toast("No problem. You can turn location on later in Settings."); return obStep("bag"); }
     case "ob-example": return finishOnboarding(await makeExample(S.ob.name));
@@ -1796,7 +1923,10 @@ document.addEventListener("click", async (e) => {
       const name = $("#bagName").value.trim() || "My bag", who = ($("#ownerName")?.value || S.ob.name || "").trim() || "You";
       const k = S.claimBag || newBagKey(); S.claimBag = null;
       S.data = { bag: { id: k.id, key: k.key, name, claimedAt: Date.now() }, owners: [{ gen: 1, name: who, since: Date.now() }], memories: [], isExample: false, onboarded: true, tagSeenAt: Date.now() };
-      S.opened.clear(); persist(); await boop();
+      S.opened.clear(); persist();
+      // Next: let the bag buzz. Browsers without Bluetooth skip straight on (the buzz stays on screen).
+      if (RealBag.supported && !realBagPaired()) { S.view.step = "buzzer"; return render(); }
+      await boop("claim");
       S.view.step = "intro"; return render();
     }
     case "capture-next": {
@@ -1817,7 +1947,7 @@ document.addEventListener("click", async (e) => {
       const r = { id: uid(), author, at: Date.now(), box: await seal(S.data.bag.key, { kind: "note", text, author, at: Date.now() }, null) };
       m.responses.push(r); persist();
       S.opened.set(r.id, { meta: { kind: "note", text, author, at: r.at }, mediaUrl: "" });
-      S.view.respond = false; render(); await boop(); return toast(`Sealed with ${m.author === "You" ? "your" : m.author + "'s"} memory.`);
+      S.view.respond = false; render(); await boop("reply"); return toast(`Sealed with ${m.author === "You" ? "your" : m.author + "'s"} memory.`);
     }
     case "copy-code": {
       const code = $("#recCode").textContent;
@@ -1901,6 +2031,7 @@ function retireTab() {
   renderSim();
   const saved = await loadState();
   const tag = readTag(location.hash);
+  if (tag) tag.tapAt = 0; // this page was opened by the tap: count from the moment Safari/Chrome started loading it
   if (!saved?.onboarded || !saved.bag?.id) {
     // First launch: get to know the person before handing them a bag.
     Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
