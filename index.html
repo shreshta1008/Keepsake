@@ -640,7 +640,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.nfc1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-09.nfc2"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1304,6 +1304,9 @@ function viewPrivacy() {
     h += `<div class="notice bad stack" role="alert"><b>Delete everything on this phone?</b><span>The sealed memories and the key will be erased here. The bag itself keeps its key, but these memories can't come back unless you exported them.</span>
       <div class="row"><button class="btn primary" data-action="delete-yes" style="background:var(--warn);border-color:var(--warn)">Delete everything</button><button class="btn" data-action="delete-no">Keep them</button></div></div>`;
   } else {
+    h += `<button class="btn" data-action="replay-intro">See the introduction again</button>
+      <p class="muted small" style="text-align:center;margin:0">Your bag and its memories stay as they are.</p>
+      <hr class="stitch">`;
     h += `<div class="row"><button class="btn" data-action="new-bag">Start with a new bag</button><button class="btn" data-action="delete">Delete everything</button></div>`;
     h += `<p class="muted small" style="text-align:center">Keepsake web · version ${BUILD.startsWith("__") ? "preview" : BUILD} · with NFC tags and Bluetooth</p>`;
   }
@@ -1330,6 +1333,10 @@ function viewWelcome() {
       <p class="muted">Only while the app is open. Your location stays on this phone and is never tracked in the background.</p></div>
     <button class="btn primary" data-action="ob-allow">Allow location</button>
     <button class="link" data-ob="bag" style="align-self:center">Not now</button>`;
+  if (S.data) return `
+    <div class="stack onboard"><span class="eyebrow">3 of 3</span><h2>That's Keepsake${S.ob.name ? `, ${esc(S.ob.name)}` : ""}.</h2>
+      <p>Your bag, ${esc(S.data.bag.name)}, is just as you left it.</p></div>
+    <button class="btn primary" data-action="replay-done">Back to my bag</button>`;
   return `
     <div class="stack onboard"><span class="eyebrow">3 of 3</span><h2>Which bag are you holding${S.ob.name ? `, ${esc(S.ob.name)}` : ""}?</h2></div>
     <div class="stack">
@@ -1914,6 +1921,8 @@ document.addEventListener("click", async (e) => {
     case "ble-fx": { const n = Math.round(+($("#simFx")?.value || 0)); S.sim.fx = n; return testBuzz(`fx:${n}`); }
     case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
     case "timing-clear": return Timing.clear();
+    case "replay-intro": S.ob = { name: currentOwner().name === "You" ? "" : currentOwner().name }; return go("welcome", { step: "hello" });
+    case "replay-done": return go("home");
     case "nfc-listen": return startNfc(true);
     case "nfc-write": {
       const bag = S.claimBag || S.data?.bag; if (!bag) return;

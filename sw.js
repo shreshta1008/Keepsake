@@ -1,4 +1,4 @@
-const CACHE = "keepsake-2026-11-09.nfc1"; // change with BUILD in index.html so phones fetch the new files
+const CACHE = "keepsake-2026-11-09.nfc2"; // change with BUILD in index.html so phones fetch the new files
 const SHELL = ["./", "./index.html", "./keepsake.config.js", "./bag-haptics.js", "./tag-reader.js", "./manifest.webmanifest", "./icons/icon-180.png", "./icons/icon-192.png", "./icons/icon-512.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
