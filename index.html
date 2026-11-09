@@ -1,0 +1,1927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3D1C1A">
+<meta name="description" content="A leather heirloom bag that carries each generation's memories forward.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Keepsake">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+html { -webkit-tap-highlight-color: transparent; }
+body { overscroll-behavior-y: none; }
+</style>
+</head>
+<body>
+<title>Keepsake</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<style>
+/* Layout: one phone-width app column; on wide screens the virtual bag sits beside it, on phones it's a pull-up sheet. */
+:root {
+  --bg: #F9F6F0;        /* cream paper */
+  --surface: #F2ECE2;   /* slightly deeper paper for wells */
+  --fg: #2A1A15;        /* deep brown ink */
+  --muted: #6E5A4E;
+  --primary: #3D1C1A;   /* oxblood */
+  --on-primary: #F9F6F0;
+  --accent: #B5662F;    /* cognac */
+  --line: #B08D57;      /* brass hairline */
+  --deboss-hi: rgba(255,255,255,.85);
+  --deboss-lo: rgba(61,28,26,.22);
+  --ok: #3E6B3A;
+  --warn: #8A3B1E;
+  --grain-opacity: .05;
+  --grain-filter: none;
+  --heading: #3D1C1A;   /* titles: oxblood ink */
+  --core: #3D1C1A;      /* centre of the rings: the first owner */
+  --bg-image: none;
+  --display: "Instrument Serif", "Bodoni 72", "Didot", Georgia, serif;
+  --body: "DM Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(.32,.08,.24,1);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #2A1912; --surface: #3A241A; --fg: #F2E4CC; --muted: #C7AE90; --heading: #EFD9B2; --core: #5C3524;
+  --primary: #C9A469; --on-primary: #2A1912; --accent: #CF9A63; --line: #9E7E55;
+  --deboss-hi: rgba(255,228,186,.07); --deboss-lo: rgba(0,0,0,.55);
+  --ok: #9CC48D; --warn: #E8A388; --grain-opacity: .11; --grain-filter: invert(1);
+  --bg-image: radial-gradient(130% 70% at 50% -8%, #42291D 0%, #2A1912 55%, #1E120D 100%);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #2A1912; --surface: #3A241A; --fg: #F2E4CC; --muted: #C7AE90; --heading: #EFD9B2; --core: #5C3524;
+  --primary: #C9A469; --on-primary: #2A1912; --accent: #CF9A63; --line: #9E7E55;
+  --deboss-hi: rgba(255,228,186,.07); --deboss-lo: rgba(0,0,0,.55);
+  --ok: #9CC48D; --warn: #E8A388; --grain-opacity: .11; --grain-filter: invert(1);
+  --bg-image: radial-gradient(130% 70% at 50% -8%, #42291D 0%, #2A1912 55%, #1E120D 100%);
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed;
+  color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { /* leather grain */
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: var(--grain-opacity); z-index: 0; filter: var(--grain-filter);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .2  0 0 0 0 .1  0 0 0 0 .05  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.shell {
+  position: relative; z-index: 1; min-height: 100%;
+  display: grid; justify-content: center; grid-template-columns: minmax(0, 440px);
+  gap: 32px; padding-block: 12px 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 440px) 320px; padding-block: 32px 48px; align-items: start; }
+}
+main { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: -.005em; }
+h1 { font-size: 46px; line-height: 1; color: var(--heading); }
+h2 { font-size: 34px; line-height: 1.05; color: var(--heading); }
+h3 { font-size: 24px; line-height: 1.15; }
+p { margin: 0; max-width: 34em; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.eyebrow { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.stitch { border: 0; border-top: 1.5px dashed var(--line); margin: 4px 0; opacity: .9; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
+.pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+
+button, .btn { font: inherit; cursor: pointer; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  min-height: 56px; padding: 12px 20px; border-radius: 14px; font-size: 19px; font-weight: 500;
+  border: 1.5px solid var(--primary); background: transparent; color: var(--primary);
+  transition: transform .3s var(--ease), opacity .3s var(--ease);
+}
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn:active { transform: scale(.985); }
+.btn[disabled] { opacity: .45; cursor: default; }
+.link { background: none; border: 0; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; min-height: 44px; padding: 8px 4px; font-size: 17px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* Debossed tap target */
+.deboss {
+  position: relative; width: 196px; height: 196px; border-radius: 50%; margin: 8px auto; border: 0;
+  background: radial-gradient(circle at 50% 45%, var(--surface), var(--bg) 70%);
+  box-shadow: inset 6px 8px 14px var(--deboss-lo), inset -6px -6px 12px var(--deboss-hi), 0 0 0 1px var(--line);
+  display: grid; place-items: center; color: var(--primary); font-family: var(--display); font-size: 26px;
+  transition: transform .4s var(--ease);
+}
+.deboss::after { /* stitched inner ring */
+  content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 1.5px dashed var(--line); opacity: .8;
+}
+.deboss.waiting { animation: breathe 2.4s var(--ease) infinite; }
+.deboss.small { width: 120px; height: 120px; font-size: 20px; }
+@keyframes breathe { 0%,100% { box-shadow: inset 6px 8px 14px var(--deboss-lo), inset -6px -6px 12px var(--deboss-hi), 0 0 0 1px var(--line); }
+  50% { box-shadow: inset 6px 8px 14px var(--deboss-lo), inset -6px -6px 12px var(--deboss-hi), 0 0 0 8px color-mix(in srgb, var(--accent) 22%, transparent); } }
+.buzz { animation: buzz .5s linear 1; }
+@keyframes buzz { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-2px,1px); } 40% { transform: translate(2px,-1px); } 60% { transform: translate(-2px,0); } 80% { transform: translate(1px,1px); } }
+
+/* Rings */
+.rings { width: 100%; max-width: 360px; margin: 0 auto; display: block; aspect-ratio: 1; }
+.rings .mark { cursor: pointer; }
+.rings .mark:focus-visible { outline: none; }
+.rings .mark:focus-visible circle { stroke: var(--accent); stroke-width: 3; }
+.grow { transform-box: fill-box; transform-origin: center; animation: grow .6s var(--ease) 1; }
+@keyframes grow { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ring-new { animation: ringIn .6s var(--ease) 1; transform-origin: 160px 160px; }
+@keyframes ringIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.chapters { display: flex; flex-direction: column; gap: 4px; }
+.chapter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 8px; }
+.mem-btn {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left;
+  min-height: 56px; padding: 10px 4px; border: 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 60%, transparent);
+  background: none; color: var(--fg);
+}
+.mem-btn .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); justify-self: center; }
+.mem-btn .dot.open { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+.mem-btn span { min-width: 0; }
+.mem-btn .meta { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.gap-note { font-family: var(--display); font-style: italic; font-size: 20px; color: var(--accent); padding: 8px 4px; }
+
+/* Choices */
+.choice {
+  display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; text-align: left; width: 100%;
+  min-height: 84px; padding: 14px 16px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg);
+}
+.choice svg { width: 44px; height: 44px; stroke: var(--primary); fill: none; stroke-width: 1.6; }
+.choice b { font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--heading); display: block; line-height: 1.1; }
+
+.prompts { display: flex; flex-direction: column; gap: 6px; font-family: var(--display); font-size: 25px; line-height: 1.2; color: var(--heading); }
+.prompts span::before { content: "— "; color: var(--line); }
+label { font-size: 15px; font-weight: 500; color: var(--muted); display: block; margin-bottom: 6px; }
+input[type=text], textarea {
+  width: 100%; font: inherit; font-size: 18px; color: var(--fg); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px;
+}
+textarea { min-height: 150px; resize: vertical; }
+input[type=range] { width: 100%; accent-color: var(--accent); min-height: 44px; }
+.record {
+  width: 168px; height: 168px; border-radius: 50%; border: 0; margin: 8px auto; display: grid; place-items: center;
+  background: var(--primary); color: var(--on-primary); font-size: 20px; font-weight: 500; text-align: center; line-height: 1.2;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.record.recording { background: var(--accent); animation: breathe 1.6s var(--ease) infinite; }
+.preview img { width: 100%; border-radius: 12px; display: block; }
+audio { width: 100%; }
+
+/* Hold-to-seal */
+.hold { position: relative; overflow: hidden; }
+.hold .fill { position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); opacity: .9; }
+.hold span { position: relative; }
+
+/* Reveal */
+.memory-card { background: var(--surface); border-radius: 18px; padding: 20px; border: 1px solid color-mix(in srgb, var(--line) 50%, transparent); display: flex; flex-direction: column; gap: 14px; }
+.memory-card.reveal { animation: reveal 1.3s var(--ease) 1; }
+@keyframes reveal { 0% { opacity: 0; filter: blur(14px); transform: scale(.97); } 60% { opacity: 1; } 100% { filter: blur(0); transform: scale(1); } }
+.memory-text { font-family: var(--display); font-size: 25px; line-height: 1.3; white-space: pre-wrap; }
+.locked { display: grid; gap: 10px; place-items: center; text-align: center; padding: 28px 12px; }
+.lock-ring { width: 72px; height: 72px; border-radius: 50%; border: 1.5px dashed var(--line); display: grid; place-items: center; }
+.response { border-left: 2px dashed var(--line); padding-left: 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.notice { border-radius: 14px; padding: 14px 16px; background: color-mix(in srgb, var(--accent) 12%, var(--bg)); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.notice.bad { background: color-mix(in srgb, var(--warn) 10%, var(--bg)); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 12px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 60%, transparent); }
+.kv b { font-weight: 600; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; word-break: break-all; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 36;
+  background: var(--primary); color: var(--on-primary); padding: 12px 18px; border-radius: 12px; max-width: min(92vw, 420px); font-size: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.2);
+}
+
+/* Virtual bag panel */
+.sim {
+  background: var(--surface); border: 1.5px dashed var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;
+}
+.sim h3 { font-size: 26px; color: var(--heading); }
+.sim select { width: 100%; font: inherit; font-size: 16px; min-height: 48px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 8px 10px; }
+.sim .bagface { display: grid; justify-items: center; gap: 6px; }
+.toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; font-size: 16px; }
+.toggle input { width: 24px; height: 24px; accent-color: var(--accent); }
+.sim-open {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  min-height: 56px; padding: 0 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--primary);
+  font-size: 17px; font-weight: 500; box-shadow: 0 6px 24px rgba(0,0,0,.15); display: flex; align-items: center; gap: 10px;
+}
+.sim-open .led { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.sim-open .led.on { background: var(--accent); animation: breathe 1.6s infinite; }
+@media (max-width: 899px) {
+  aside.sim { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; border-radius: 20px 20px 0 0; max-height: 82vh; overflow-y: auto;
+    padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 40px rgba(0,0,0,.18); border-bottom: 0; }
+  aside.sim[data-closed] { display: none; }
+}
+@media (min-width: 900px) { .sim-open, .sim-close { display: none !important; } aside.sim { position: sticky; top: calc(24px + env(safe-area-inset-top, 0px)); } }
+
+/* ---------- The bag itself: leather stays leather in both themes ---------- */
+:root { --leather: #8A4422; --leather-deep: #3D1C1A; --leather-mid: #5E2A1C; --stitch: #E6C48A; --brass-hi: #F4DFA8; --brass: #B08D57; --brass-lo: #7A5C2E; --lining-shadow: rgba(46,20,12,.30); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lining-shadow: rgba(0,0,0,.65); } }
+:root[data-theme="dark"] { --lining-shadow: rgba(0,0,0,.65); }
+
+.bag { position: fixed; inset: 0; z-index: 40; perspective: 1600px; overflow: hidden; background: var(--leather-deep); }
+.bag-body, .bag-flap { position: absolute; left: 0; right: 0; }
+.bag-body {
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% 100%, var(--leather) 0%, var(--leather-mid) 70%, var(--leather-deep) 100%);
+}
+.bag-body::before { /* stitched seam around the bag front */
+  content: ""; position: absolute; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); top: 40%;
+  border: 2px dashed var(--stitch); border-top: 0; border-radius: 0 0 26px 26px; opacity: .55;
+}
+.leather-grain::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .32; mix-blend-mode: multiply; border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25  0 0 0 0 .12  0 0 0 0 .06  0 0 0 1.2 -.1'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.bag-flap {
+  top: 0; height: 58%; transform-origin: 50% 0; backface-visibility: hidden;
+  background: linear-gradient(180deg, var(--leather-deep) 0%, var(--leather-mid) 78%, #6B301E 100%);
+  border-radius: 0 0 50% 50% / 0 0 20% 20%;
+  box-shadow: 0 22px 36px rgba(20,8,4,.5), inset 0 -2px 0 rgba(255,220,170,.12);
+}
+.flap-stitch {
+  position: absolute; left: 14px; right: 14px; top: -4px; bottom: 14px;
+  border: 2px dashed var(--stitch); border-top: 0; border-radius: 0 0 50% 50% / 0 0 21% 21%; opacity: .75;
+}
+.flap-name {
+  position: absolute; left: 0; right: 0; top: 34%; text-align: center; padding: 0 32px;
+  font-family: var(--display); font-size: 44px; line-height: 1; text-wrap: balance;
+  color: rgba(24,8,4,.62); text-shadow: 0 1px 0 rgba(255,214,160,.26), 0 -1px 0 rgba(0,0,0,.4); /* debossed */
+}
+.flap-sub { display: block; font-family: var(--body); font-size: 13px; letter-spacing: .2em; text-transform: uppercase; margin-top: 14px; color: rgba(255,224,180,.38); text-shadow: none; }
+.clasp {
+  position: absolute; left: 50%; top: calc(58% - 40px); width: 80px; height: 80px; margin-left: -40px; border-radius: 50%; border: 0; z-index: 2;
+  background: radial-gradient(circle at 34% 28%, var(--brass-hi) 0%, var(--brass) 42%, var(--brass-lo) 100%);
+  box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 -4px 8px rgba(60,40,10,.35), inset 0 3px 4px rgba(255,245,210,.45);
+  cursor: pointer;
+}
+.clasp::before { content: ""; position: absolute; inset: 16px; border-radius: 50%; border: 2px solid rgba(90,62,24,.55); box-shadow: inset 0 2px 3px rgba(0,0,0,.25), 0 1px 0 rgba(255,240,200,.4); }
+.clasp:focus-visible { outline: 3px solid var(--stitch); outline-offset: 6px; }
+.clasp.ready { animation: claspGlow 2.6s var(--ease) infinite; }
+@keyframes claspGlow { 0%,100% { box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 -4px 8px rgba(60,40,10,.35), inset 0 3px 4px rgba(255,245,210,.45), 0 0 0 0 rgba(230,196,138,0); }
+  50% { box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 -4px 8px rgba(60,40,10,.35), inset 0 3px 4px rgba(255,245,210,.45), 0 0 0 14px rgba(230,196,138,.16); } }
+.bag-hint {
+  position: absolute; left: 0; right: 0; top: calc(58% + 64px); text-align: center; padding: 0 24px; margin: 0; max-width: none;
+  color: var(--stitch); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; opacity: .85;
+}
+/* Inside the bag: the flap's shadow across the mouth of the bag */
+.mouth { position: fixed; left: 0; right: 0; top: 0; height: calc(64px + env(safe-area-inset-top, 0px)); z-index: 5; pointer-events: none;
+  background: linear-gradient(180deg, var(--lining-shadow), transparent); }
+/* Stitched pockets that hold each chapter */
+.pocket {
+  position: relative; border-radius: 10px 10px 22px 22px; padding: 24px 22px 12px;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  box-shadow: inset 0 14px 14px -12px var(--lining-shadow);
+}
+.pocket::before { content: ""; position: absolute; left: 10px; right: 10px; top: 8px; border-top: 1.5px dashed var(--line); opacity: .9; }
+.pocket::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 7px; top: 8px; border: 1.5px dashed var(--line); border-top: 0; border-radius: 0 0 16px 16px; opacity: .45; pointer-events: none; }
+.pocket .chapter-head { margin-top: 0; }
+.pocket .mem-btn:last-child { border-bottom: 0; }
+.chapters { gap: 16px; }
+.memory-card.reveal { animation: liftOut 1.3s var(--ease) 1; }
+@keyframes liftOut { 0% { opacity: 0; filter: blur(14px); transform: translateY(70px) scale(.96); } 55% { opacity: 1; } 100% { filter: blur(0); transform: none; } }
+.grow.late { animation-delay: 1.25s; animation-fill-mode: both; }
+
+/* ---------- onboarding, place, globe ---------- */
+.onboard { padding-top: 28px; }
+/* "Tap your phone to the tag": a picture of what to do, not a button */
+.tag-prompt { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.tag-prompt .deboss { cursor: default; }
+.tag-prompt .deboss svg, .arrival .ring svg { width: 56%; height: 56%; stroke: var(--primary); fill: none; stroke-width: 1.6; }
+.tag-prompt .deboss.small svg { width: 52%; height: 52%; }
+.tag-prompt b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.15; color: var(--heading); }
+/* The bag is buzzing: a memory waits here */
+.arrival { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 35;
+  max-width: 460px; margin: 0 auto; display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center;
+  padding: 16px; border-radius: 20px; background: var(--surface); color: var(--fg); border: 1.5px solid var(--accent);
+  box-shadow: 0 14px 40px rgba(20,8,4,.28); }
+.arrival .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; border: 1.5px dashed var(--line); animation: breathe 1.6s var(--ease) infinite; }
+.arrival b { font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--heading); display: block; line-height: 1.15; }
+.arrival .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.steps li { padding-left: 4px; }
+.coords { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.you-tag { font-family: var(--body); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-left: 8px; vertical-align: middle; }
+.globe-wrap { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1; margin: 0 auto; touch-action: none; }
+.globe-wrap canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.globe-wrap canvas:active { cursor: grabbing; }
+.globe-zoom { position: absolute; right: 4px; bottom: 4px; display: flex; flex-direction: column; gap: 6px; }
+.globe-zoom button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-size: 22px; line-height: 1; }
+.local { background: var(--surface); border-radius: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--line) 45%, transparent); display: flex; flex-direction: column; gap: 10px; }
+.local svg { width: 100%; height: auto; display: block; }
+.local svg .pin { cursor: pointer; }
+.local svg .pin:focus-visible { outline: none; }
+.local svg .pin:focus-visible circle.core { stroke: var(--accent); stroke-width: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<div class="bag" id="bag" data-bag role="dialog" aria-modal="true" aria-labelledby="flapName">
+  <div class="bag-body leather-grain"></div>
+  <div class="bag-flap leather-grain"><div class="flap-stitch"></div><div class="flap-name" id="flapName">Keepsake</div></div>
+  <button class="clasp ready" id="clasp" aria-label="Open the bag" aria-describedby="bagHint"></button>
+  <p class="bag-hint" id="bagHint">Press the clasp to open</p>
+</div>
+<div class="mouth" aria-hidden="true"></div>
+<div class="shell" id="shell" inert>
+  <main id="app" aria-live="polite"></main>
+  <aside class="sim" id="sim" aria-label="Virtual bag simulator" data-closed></aside>
+</div>
+<button class="sim-open" id="simOpen" aria-controls="sim"><span class="led" id="simLed"></span>Virtual bag</button>
+<div id="arrival" class="arrival" role="alert" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================
+   A Purse That Remembers: interactive prototype
+   Same model as the app: the bag holds a bag ID + key; the phone
+   encrypts (AES-256-GCM), checks place, decrypts, and boops.
+   NFC, Bluetooth and GPS are simulated by the Virtual bag panel.
+   ============================================================ */
+
+const PLACES = [
+  { id: "home",    name: "Home, at the kitchen table",   lat: 41.83500, lng: -71.40000 },
+  { id: "terrace", name: "Prospect Terrace Park",        lat: 41.82966, lng: -71.40724 },
+  { id: "atwells", name: "Atwells Avenue, Federal Hill", lat: 41.82370, lng: -71.42430 },
+  { id: "india",   name: "India Point Park",             lat: 41.81960, lng: -71.39150 },
+  { id: "museum",  name: "RISD Museum",                  lat: 41.82680, lng: -71.40860 },
+];
+const OFFSETS = [ [0, "Right here"], [40, "40 m away"], [120, "120 m away"], [400, "400 m away"], [3000, "3 km away"] ];
+
+/* ---------- small helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const uid = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => b.toString(16).padStart(2, "0")).join("");
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+function b64url(bytes) { let o = ""; for (let i = 0; i < bytes.length; i += 3) { const n = (bytes[i] << 16) | ((bytes[i+1] ?? 0) << 8) | (bytes[i+2] ?? 0); const c = i + 1 >= bytes.length ? 2 : i + 2 >= bytes.length ? 3 : 4; for (let k = 0; k < c; k++) o += B64[(n >> (18 - 6*k)) & 63]; } return o; }
+function unb64url(s) { const o = []; let buf = 0, bits = 0; for (const ch of s) { buf = ((buf << 6) | B64.indexOf(ch)) & 0xffff; bits += 6; if (bits >= 8) { bits -= 8; o.push((buf >> bits) & 255); } } return Uint8Array.from(o); }
+const sentence = (t) => (/[.!?]$/.test(t) ? t : t + ".");
+const poss = (name) => (name === "You" ? "Your" : `${esc(name)}'s`);
+function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
+function fmtDist(m) { return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1)} km`; }
+function haversine(a, b) {
+  const R = 6371000, toR = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * toR, dLng = (b.lng - a.lng) * toR;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*toR) * Math.cos(b.lat*toR) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function toast(msg, ms = 3200) {
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
+}
+function phoneHaptic(pattern = [40, 150, 70]) {
+  if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: "haptic", pattern })); return; }
+  try { navigator.vibrate?.(pattern); } catch {}
+}
+
+/* ---------- crypto: AES-256-GCM, key lives on the bag ---------- */
+async function importKey(keyB64) { return crypto.subtle.importKey("raw", unb64url(keyB64), "AES-GCM", false, ["encrypt", "decrypt"]); }
+// Plaintext layout: [4-byte meta length][meta JSON][media bytes]
+async function seal(keyB64, meta, media) {
+  const m = new TextEncoder().encode(JSON.stringify(meta));
+  const body = new Uint8Array(4 + m.length + (media ? media.byteLength : 0));
+  new DataView(body.buffer).setUint32(0, m.length); body.set(m, 4);
+  if (media) body.set(new Uint8Array(media), 4 + m.length);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await importKey(keyB64), body);
+  return { iv: b64url(iv), ct: new Uint8Array(ct) };
+}
+async function unseal(keyB64, box) {
+  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64url(box.iv) }, await importKey(keyB64), box.ct));
+  const n = new DataView(pt.buffer).getUint32(0);
+  const meta = JSON.parse(new TextDecoder().decode(pt.subarray(4, 4 + n)));
+  const media = pt.length > 4 + n ? pt.slice(4 + n).buffer : null;
+  return { meta, media };
+}
+
+/* ---------- storage (this browser only; stands in for the phone) ---------- */
+const DB_NAME = "purse-prototype", STORE = "kv";
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(STORE);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function loadState() {
+  try { const db = await idb(); return await new Promise((res) => { const g = db.transaction(STORE).objectStore(STORE).get("state"); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); }); }
+  catch { return null; }
+}
+let saveTimer = null;
+function persist() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { const db = await idb(); db.transaction(STORE, "readwrite").objectStore(STORE).put(S.data, "state"); } catch {}
+  }, 200);
+}
+async function wipeStorage() { try { const db = await idb(); db.transaction(STORE, "readwrite").objectStore(STORE).delete("state"); } catch {} }
+
+/* ---------- state ---------- */
+// data: persisted. Everything else lives only while the page is open.
+const S = {
+  data: null,              // { bag, owners, memories, isExample }
+  view: { name: "home" },
+  opened: new Map(),       // memoryId -> {meta, mediaUrl}  (decrypted, memory only)
+  sim: { place: "real", offset: 0, radius: 50, near: true, powered: true, tagBlank: false, lastBuzz: 0 },
+  ob: { name: "" },        // onboarding answers before a bag exists
+  waitTap: null,           // { label, resolve }
+  justSealed: null,
+};
+const currentOwner = () => S.data.owners[S.data.owners.length - 1];
+// Testing settings survive a tag tap (which opens a fresh page): pretend place, distance, radius.
+try { const v = JSON.parse(localStorage.getItem("keepsake.sim") || "null"); if (v && (v.place === "real" || PLACES.some((p) => p.id === v.place))) Object.assign(S.sim, { place: v.place, offset: +v.offset || 0, radius: +v.radius || 50 }); } catch {}
+function saveSim() { try { localStorage.setItem("keepsake.sim", JSON.stringify({ place: S.sim.place, offset: S.sim.offset, radius: S.sim.radius })); } catch {} }
+function pretendNote() {
+  if (S.sim.place === "real") return "";
+  const p = PLACES.find((x) => x.id === S.sim.place);
+  return `<div class="notice small">Pretending you're at <b>${esc(p?.name)}</b>${S.sim.offset ? `, ${fmtDist(S.sim.offset)} away` : ""}. To use your real location, change it in the Virtual bag panel.</div>`;
+}
+
+/* ---------- talking to the Keepsake app (when this page runs inside it) ---------- */
+// The native app answers requests the page can't make itself: precise GPS, place names,
+// the share sheet. In a plain browser Native is null and the page uses web APIs instead.
+const Native = (() => {
+  const rn = window.ReactNativeWebView;
+  if (!rn) return null;
+  const pending = new Map(), listeners = new Set();
+  let next = 0;
+  window.__keepsakeNative = (msg) => {
+    if (msg.id && pending.has(msg.id)) {
+      const p = pending.get(msg.id); pending.delete(msg.id);
+      msg.error ? p.reject(new Error(msg.error)) : p.resolve(msg.result);
+    } else if (msg.event) listeners.forEach((fn) => fn(msg));
+  };
+  return {
+    call: (type, args = {}) => new Promise((resolve, reject) => {
+      const id = String(++next);
+      pending.set(id, { resolve, reject });
+      rn.postMessage(JSON.stringify({ id, type, ...args }));
+    }),
+    on: (fn) => listeners.add(fn),
+  };
+})();
+
+/* ---------- where the phone is ---------- */
+// The phone's own location by default. The Virtual bag panel can swap in a pretend place for testing.
+const Loc = {
+  fix: null,        // { lat, lng, acc, at }
+  status: "off",    // off | asking | on | denied | unavailable
+  wasAllowed() { try { return localStorage.getItem("keepsake.location") === "on"; } catch { return false; } },
+  remember(on) { try { localStorage.setItem("keepsake.location", on ? "on" : "off"); } catch {} },
+  async start() {
+    if (this.status === "on" || this.status === "asking") return this.status;
+    this.status = "asking"; renderSim();
+    try {
+      if (Native) {
+        const r = await Native.call("location.start");
+        this.status = r?.granted ? "on" : "denied";
+      } else if (navigator.geolocation) {
+        await new Promise((resolve) => {
+          this.watchId = navigator.geolocation.watchPosition(
+            (pos) => { this.status = "on"; this.update(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy); resolve(); },
+            (err) => { if (!this.fix) this.status = err.code === 1 ? "denied" : "unavailable"; resolve(); },
+            { enableHighAccuracy: true, maximumAge: 3000, timeout: 30000 });
+        });
+      } else this.status = "unavailable";
+    } catch { this.status = "unavailable"; }
+    this.remember(this.status === "on");
+    renderSim();
+    return this.status;
+  },
+  update(lat, lng, acc) {
+    this.fix = { lat, lng, acc, at: Date.now() };
+    onLocationChange();
+  },
+};
+Native?.on((msg) => { if (msg.event === "location") { Loc.status = "on"; Loc.update(msg.lat, msg.lng, msg.acc); } });
+
+/** Where the phone is right now, or null while it's still finding out. */
+function here() {
+  if (S.sim.place !== "real") {
+    const p = PLACES.find((x) => x.id === S.sim.place) || PLACES[0];
+    return { name: p.name, lat: p.lat + S.sim.offset / 111320, lng: p.lng, acc: 0, pretend: true };
+  }
+  return Loc.fix ? { name: "", ...Loc.fix } : null;
+}
+
+/** How far the phone is from a memory's place, and whether that counts as "back there". */
+function placeCheck(m) {
+  const p = here();
+  if (!p) return { known: false, dist: Infinity, inside: false, far: false };
+  const dist = haversine(p, m.place);
+  // Phone GPS is good to a few metres outdoors: give it the benefit of its own accuracy, capped.
+  const slack = Math.min(p.acc || 0, 25);
+  return { known: true, dist, inside: dist <= m.radius + slack, far: dist > m.radius + slack + 15 };
+}
+
+function fmtCoords(p) {
+  const f = (v, pos, neg) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
+  return `${f(p.lat, "N", "S")}, ${f(p.lng, "E", "W")}`;
+}
+function locStatusText() {
+  const f = Loc.fix;
+  return Loc.status === "on" && f ? `Located to within ${Math.round(f.acc)} m · ${fmtCoords(f)}`
+    : Loc.status === "on" || Loc.status === "asking" ? "Finding where you are…"
+    : Loc.status === "denied" ? "Location is off for Keepsake. Turn it on in your phone's Settings, or pretend below."
+    : Loc.status === "unavailable" ? "Location isn't available here. Pick a pretend place below."
+    : "Location isn't on yet.";
+}
+
+/** Suggest a name for the spot: the place itself for pretend places, the phone's map lookup in the app. */
+async function suggestPlaceName(p, d) {
+  if (p.pretend) { d.placeName = p.name; return; }
+  if (!Native) return;
+  d.naming = true;
+  try {
+    const name = await Native.call("location.name", { lat: p.lat, lng: p.lng });
+    if (name && !d.placeTyped) {
+      d.placeName = name;
+      const input = document.getElementById("placeName");
+      if (input && document.activeElement !== input) input.value = name;
+    }
+  } catch {}
+  d.naming = false;
+  const input = document.getElementById("placeName");
+  if (input) input.placeholder = "Name this place";
+}
+
+/** Close an opened memory again: its words and media leave memory. */
+function closeMemory(m) {
+  for (const item of [m, ...m.responses]) {
+    const o = S.opened.get(item.id);
+    if (o?.mediaUrl) URL.revokeObjectURL(o.mediaUrl);
+    S.opened.delete(item.id);
+  }
+}
+
+let renderTimer = 0, simTimer = 0;
+/** Runs whenever the phone's position (real or pretend) changes. */
+function onLocationChange(now = false) {
+  if (!S.data) return;
+  // A memory sealed here only opens after its keeper has left and come back.
+  let changed = false;
+  for (const m of S.data.memories) if (m.armed === false && placeCheck(m).far) { m.armed = true; changed = true; }
+  if (changed) persist();
+  checkArrival();
+  // Walked away from an open memory: it closes.
+  if (S.view.name === "memory" && S.opened.has(S.view.id)) {
+    const m = S.data.memories.find((x) => x.id === S.view.id);
+    if (m && placeCheck(m).far) { closeMemory(m); render(); toast("You've walked away, so the memory closed again."); return; }
+  }
+  if (now) return;
+  // Keep distances on screen current, without re-rendering under someone's fingers.
+  if (!simTimer) simTimer = setTimeout(() => { simTimer = 0; if (!$("#sim").contains(document.activeElement)) { const el = $("#locStatus"); if (el) el.textContent = locStatusText(); } }, 800);
+  if (!renderTimer) renderTimer = setTimeout(() => {
+    renderTimer = 0;
+    if (S.waitTap || document.activeElement?.matches?.("input, textarea, select")) return;
+    const v = S.view;
+    if ((v.name === "memory" && !S.opened.has(v.id)) || (v.name === "save" && v.step === "place")) { saveDraftFields(); render(); }
+    else if (v.name === "map") Globe.refresh();
+  }, 1500);
+}
+
+/* ---------- real voice recording (when the browser allows it) ---------- */
+const rec = { mr: null, chunks: [], t0: 0, timer: 0 };
+async function toggleRecording() {
+  const d = S.view.draft;
+  if (rec.mr) { rec.mr.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { document.getElementById("fileVoice")?.click(); return; } // no microphone here: pick a recording instead
+  const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || "";
+  rec.mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined); rec.chunks = [];
+  rec.mr.ondataavailable = (e) => e.data.size && rec.chunks.push(e.data);
+  rec.mr.onstop = async () => {
+    stream.getTracks().forEach((t) => t.stop()); clearInterval(rec.timer);
+    const blob = new Blob(rec.chunks, { type: rec.mr.mimeType || type || "audio/mp4" }); rec.mr = null;
+    d.media = await blob.arrayBuffer(); d.mime = blob.type;
+    if (d.mediaUrl) URL.revokeObjectURL(d.mediaUrl); d.mediaUrl = URL.createObjectURL(blob);
+    render();
+  };
+  rec.mr.start(); rec.t0 = Date.now(); phoneHaptic(20);
+  rec.timer = setInterval(() => { const el = $("#recTime"); if (el) { const s = Math.floor((Date.now() - rec.t0) / 1000); el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; } }, 250);
+  render();
+}
+
+/* ---------- the virtual bag: NFC tap + BLE boop ---------- */
+/* ---------- the real tag in the bag ---------- */
+// The bag's NFC tag (NTAG215 or NTAG 424 DNA) holds one web link:
+//   https://keepsake-bag.expo.app/#v1.<bagId>.<key>     (docs/tag-format.md)
+// An iPhone reads it with no app open and offers to open it in Safari. So a real tap
+// arrives as Keepsake loading with that link. Anything the person was in the middle of
+// (sealing, opening, passing down, claiming) is saved first and carried on after the tap.
+const TAG_HOST = "https://keepsake-bag.expo.app/";
+const BUILD = "2026-10-21.563328"; // replaced by build-app.mjs with the build's date and version
+const tagUrl = (bag) => `${TAG_HOST}#v1.${bag.id}.${bag.key}`;
+function readTag(hash) {
+  const m = /^#?v1\.([A-Za-z0-9_-]{11})\.([A-Za-z0-9_-]{43})$/.exec(hash || "");
+  return m ? { bagId: m[1], key: m[2], at: Date.now() } : null;
+}
+const tagMatches = (tag, bag) => !!tag && !!bag && tag.bagId === bag.id && tag.key === bag.key;
+function newBagKey() { return { id: b64url(crypto.getRandomValues(new Uint8Array(8))), key: b64url(crypto.getRandomValues(new Uint8Array(32))) }; }
+
+async function savePending(p) {
+  try { const db = await idb(); db.transaction(STORE, "readwrite").objectStore(STORE).put({ ...p, at: Date.now() }, "pending"); } catch {}
+}
+async function takePending() {
+  try {
+    const db = await idb();
+    const p = await new Promise((res) => { const g = db.transaction(STORE).objectStore(STORE).get("pending"); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); });
+    db.transaction(STORE, "readwrite").objectStore(STORE).delete("pending");
+    return p && Date.now() - p.at < 10 * 60 * 1000 ? p : null; // a tap counts for what you started in the last 10 minutes
+  } catch { return null; }
+}
+function clearPending() { idb().then((db) => db.transaction(STORE, "readwrite").objectStore(STORE).delete("pending")).catch(() => {}); }
+
+/** What to do when Keepsake needs the bag: tap the phone to its NFC tag. A picture, not a button. */
+function tagPrompt(label, small = false) {
+  return `<div class="tag-prompt" role="status">
+    <div class="deboss ${small ? "small" : ""} waiting" data-bag aria-hidden="true">${icons.nfc}</div>
+    <b>${esc(label || "Tap your phone to the bag's tag")}</b>
+    <p class="muted small">Hold the top edge of your iPhone to the tag inside the bag, then tap the banner that appears.${S.data?.tagSeenAt || S.claimBag ? "" : " The tag isn't set up yet: see Settings &amp; privacy."}</p>
+    <button class="link" data-action="sim-open">No tag with you? Use the virtual bag</button>
+  </div>`;
+}
+function tapHint() {
+  return `<p class="muted small" style="text-align:center">With the real bag: hold the top of your iPhone to its tag, then tap the banner that appears.${S.data?.tagSeenAt || S.claimBag ? "" : " First set up the tag in Settings &amp; privacy."} Testing? Tap the circle instead.</p>`;
+}
+
+/** Step-by-step for writing the bag's link with the NFC Tools app. */
+function tagSetupBlock(bag) {
+  const link = tagUrl(bag).replace(/^https:\/\//, "");
+  return `<div class="local">
+    <h3>Write the link onto your bag's tag</h3>
+    <ol class="steps">
+      <li><button class="link" data-action="copy-tag" style="padding:0;min-height:0">Copy this bag's link</button></li>
+      <li>Open <b>NFC Tools</b> → <b>Write</b> → <b>Add a record</b> → <b>URL / URI</b>.</li>
+      <li>Leave the start set to <b>https://</b>, paste the link into the box, and tap <b>OK</b>.</li>
+      <li>Tap <b>Write</b>, then hold the top of your iPhone flat against the tag until it says it's done.</li>
+    </ol>
+    <p class="mono" id="tagLink" style="font-size:12px">${esc(link)}</p>
+    <p class="muted small">Works with both your tags: the NTAG215 stickers and the NTAG 424 DNA. The link carries this bag's key, so the tag belongs inside the bag. Use Keepsake in Safari for this: the home-screen icon keeps its memories separately, and a tag tap always opens Safari.</p>
+  </div>`;
+}
+
+/** Wait until the phone knows where it is (a tag tap often lands before the first GPS fix). */
+async function waitForFix(ms = 15000) {
+  if (here()) return true;
+  if (Loc.status === "off" || Loc.status === "denied") await Loc.start();
+  const t0 = Date.now();
+  while (!here() && Date.now() - t0 < ms && Loc.status !== "denied" && Loc.status !== "unavailable") await sleep(250);
+  return !!here();
+}
+
+/** The memory waiting where the phone is now (sealed earlier and not just sealed here), if any. */
+function arrivalHere() {
+  if (!S.data) return null;
+  return S.data.memories.filter((m) => m.armed !== false && placeCheck(m).inside && !S.opened.has(m.id))
+    .sort((a, b) => placeCheck(a).dist - placeCheck(b).dist)[0] || null;
+}
+function nearestText() {
+  const m = [...S.data.memories].sort((a, b) => placeCheck(a).dist - placeCheck(b).dist)[0];
+  return m ? `The nearest is ${esc(m.place.name)}, ${fmtDist(placeCheck(m).dist)} away.` : "";
+}
+// One buzz per arrival: remembered across the page reload a tag tap causes, forgotten once you leave.
+const announced = { get() { try { return localStorage.getItem("keepsake.arrived") || ""; } catch { return ""; } }, set(v) { try { v ? localStorage.setItem("keepsake.arrived", v) : localStorage.removeItem("keepsake.arrived"); } catch {} } };
+async function checkArrival() {
+  if (!S.data || !Bag.isOpen) return;
+  const last = announced.get();
+  if (last) { const prev = S.data.memories.find((x) => x.id === last); if (!prev || placeCheck(prev).far) { announced.set(""); hideArrival(); } }
+  const m = arrivalHere();
+  if (!m || announced.get() === m.id || S.waitTap || S.preTapped) return; // a tag tap is already opening it
+  announced.set(m.id);
+  // The bag buzzes first (its motor, over Bluetooth, in the iPhone app; on screen here). That's the cue to tap.
+  await boop();
+  showArrival(m);
+  if (S.view.name === "home" || S.view.name === "memory") render();
+}
+function showArrival(m) {
+  const el = $("#arrival");
+  el.innerHTML = `<div class="ring" data-bag aria-hidden="true">${icons.nfc}</div>
+    <div><b>Your bag is buzzing.</b><span class="small">${poss(m.author)} memory waits here, at ${esc(m.place.name)}. Tap your phone to the bag's tag to open it.</span></div>
+    <div class="actions"><button class="link" data-action="arrival-later">Not now</button></div>`;
+  el.hidden = false;
+  if (!reduceMotion()) el.animate([{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], { duration: 500, easing: EASE });
+}
+function hideArrival() { const el = $("#arrival"); if (el) el.hidden = true; }
+
+/** Open whatever memory waits where the phone is now. */
+async function openHere() {
+  if (!S.data.memories.length) return toast("No memories in this bag yet. Save the first one.");
+  if (!here()) return toast("Keepsake doesn't know where you are yet. Check that location is on.");
+  const ms = [...S.data.memories].sort((x, y) => placeCheck(x).dist - placeCheck(y).dist);
+  const inside = ms.find((m) => placeCheck(m).inside && m.armed !== false);
+  return openMemory(inside || ms[0], true);
+}
+
+/** Keepsake was opened by tapping a real tag. */
+async function onTagTap(tag) {
+  history.replaceState(null, "", location.pathname + location.search); // the key shouldn't sit in the address bar
+  // Already open and waiting for a tap (iPhone reused this tab): that's the tap.
+  if (S.waitTap && (tagMatches(tag, S.data?.bag) || tagMatches(tag, S.claimBag))) {
+    const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve(true);
+    if (S.data) { S.data.tagSeenAt = Date.now(); persist(); }
+    return;
+  }
+  const pend = await takePending();
+  if (pend?.type === "claim" && tagMatches(tag, pend.bag)) {
+    S.claimBag = pend.bag; S.ob = pend.ob || S.ob;
+    S.view = { name: "claim", step: "name" }; Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
+    render(); toast("That's your bag's tag. Now give the bag a name."); return;
+  }
+  if (!S.data) {
+    // Someone new tapped a Keepsake tag: offer to make this the bag they're holding.
+    S.ob.tag = tag; return;
+  }
+  if (!tagMatches(tag, S.data.bag)) { toast("This tag belongs to a different bag."); return; }
+  S.data.tagSeenAt = Date.now(); persist();
+  S.preTapped = { at: Date.now() };
+  bagFace(); if (!Bag.isOpen) await Bag.open();
+  if (pend?.type === "seal") {
+    const d = pend.draft;
+    if (d.media) d.mediaUrl = URL.createObjectURL(new Blob([d.media], { type: d.mime || "application/octet-stream" }));
+    S.view = { name: "save", step: "seal", draft: d }; render();
+    if (!d.spot) await waitForFix();
+    return doSeal();
+  }
+  if (pend?.type === "pass") { S.view = { name: "pass", next: pend.next }; render(); return doPass(pend.next); }
+  if (pend?.type === "open") {
+    const m = S.data.memories.find((x) => x.id === pend.id);
+    if (m) { S.view = { name: "memory", id: m.id }; render(); await waitForFix(); return openMemory(m, pend.viaHome); }
+  }
+  // A plain tap: open whatever waits here.
+  S.view = { name: "home" }; render();
+  toast("Your bag is here. Checking where you are…");
+  if (!(await waitForFix())) { S.preTapped = null; return toast("Keepsake can't see where you are. Allow location for this site, then tap the bag again."); }
+  return openHere();
+}
+
+/** Waits for the bag: a real tag tap (which may reload the page) or the virtual bag. */
+function waitForTap(label, pending) {
+  if (S.preTapped && Date.now() - S.preTapped.at < 120000) { S.preTapped = null; return Promise.resolve(true); }
+  if (pending) savePending(pending);
+  return new Promise((resolve) => { S.waitTap = { label, resolve }; renderSim(); render(); });
+}
+function tapBag() {
+  // No flow waiting: a simulated tap behaves like tapping the real tag here.
+  if (!S.waitTap) { if (S.data) { S.preTapped = { at: Date.now() }; closeSimOnPhone(); openHere(); } return; }
+  const w = S.waitTap; S.waitTap = null;
+  if (!S.sim.near) { toast("The phone isn't close enough to the bag (Virtual bag → Phone near the bag)."); S.waitTap = w; renderSim(); return; }
+  renderSim(); clearPending(); w.resolve(true);
+  closeSimOnPhone();
+}
+function closeSimOnPhone() { if (matchMedia("(max-width: 899px)").matches) $("#sim").setAttribute("data-closed", ""); }
+function cancelTap() { const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w?.resolve(false); }
+async function boop() {
+  // Real app: BLE write to the ESP32 (cold ~1 s, warm ~60 ms). Here: animate the virtual bag.
+  phoneHaptic();
+  if (!S.sim.powered) { toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
+  await sleep(250);
+  S.sim.lastBuzz = Date.now(); renderSim();
+  for (const el of document.querySelectorAll("[data-bag]")) { el.classList.remove("buzz"); void el.offsetWidth; el.classList.add("buzz"); }
+}
+
+/* ---------- the closed bag: flap, clasp, going inside ---------- */
+const EASE = "cubic-bezier(.32,.08,.24,1)";
+/** An animation's end, but never later than its planned length: a hidden or throttled page must not stall a flow. */
+function finished(a, opts = {}) {
+  const ms = (opts.duration || 0) + (opts.delay || 0) + 150;
+  return Promise.race([a.finished.catch(() => {}), sleep(ms)]);
+}
+const Bag = {
+  get el() { return $("#bag"); },
+  isOpen: false, waiter: null, anims: [],
+  setFace(name, sub, hint) {
+    $("#flapName").innerHTML = `${esc(name)}${sub ? `<span class="flap-sub">${esc(sub)}</span>` : ""}`;
+    $("#bagHint").textContent = hint;
+  },
+  clear() { this.anims.forEach((a) => a.cancel()); this.anims = []; },
+  play(el, frames, opts) { const a = el.animate(frames, { easing: EASE, fill: "both", ...opts }); this.anims.push(a); return finished(a, opts); },
+  /** Resolves when someone presses the clasp. */
+  waitForClasp() { $("#clasp").classList.add("ready"); $("#clasp").focus({ preventScroll: true }); return new Promise((r) => (this.waiter = r)); },
+  pressClasp() { const w = this.waiter; this.waiter = null; $("#clasp").classList.remove("ready"); w ? w() : this.open(); },
+  async open() {
+    if (this.isOpen) return;
+    const bag = this.el, flap = $(".bag-flap"), body = $(".bag-body"), clasp = $("#clasp"), hint = $("#bagHint"), shell = $("#shell");
+    phoneHaptic(20);
+    if (reduceMotion()) {
+      await this.play(bag, [{ opacity: 1 }, { opacity: 0 }], { duration: 250 });
+    } else {
+      bag.style.background = "transparent";
+      this.play(clasp, [{ transform: "scale(1)" }, { transform: "scale(.86)", offset: .35 }, { transform: "translateY(-10px) scale(1.02)", opacity: 0 }], { duration: 420 });
+      this.play(hint, [{ opacity: .85 }, { opacity: 0 }], { duration: 250 });
+      // The flap lifts slowly at first (leather is heavy), then swings up and away.
+      this.play(flap, [{ transform: "rotateX(0deg)", opacity: 1 }, { transform: "rotateX(28deg)", opacity: 1, offset: .45 }, { transform: "rotateX(70deg)", opacity: 1, offset: .75 }, { transform: "rotateX(105deg)", opacity: 0 }], { duration: 1250, delay: 200, easing: "cubic-bezier(.4,0,.6,1)" });
+      // Then we go in: the bag front opens around us and the lining comes up.
+      this.play(body, [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.5)", opacity: 0 }], { duration: 950, delay: 900 });
+      await this.play(shell, [{ transform: "translateY(30px) scale(.92)", filter: "brightness(.65)", opacity: 0 }, { transform: "none", filter: "none", opacity: 1 }], { duration: 1000, delay: 980 });
+    }
+    bag.hidden = true; bag.style.background = ""; this.clear();
+    shell.inert = false; this.isOpen = true;
+    setTimeout(checkArrival, 400);
+  },
+  async close(hint = "") {
+    const bag = this.el, flap = $(".bag-flap"), body = $(".bag-body"), clasp = $("#clasp"), hintEl = $("#bagHint"), shell = $("#shell");
+    this.clear(); shell.inert = true; this.isOpen = false;
+    hintEl.textContent = hint; clasp.classList.remove("ready");
+    bag.hidden = false;
+    if (reduceMotion()) { await this.play(bag, [{ opacity: 0 }, { opacity: 1 }], { duration: 250 }); this.clear(); return; }
+    bag.style.background = "transparent";
+    this.play(shell, [{ transform: "none", filter: "none" }, { transform: "translateY(18px) scale(.95)", filter: "brightness(.7)" }], { duration: 700 });
+    this.play(body, [{ transform: "scale(1.45)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 620 });
+    this.play(clasp, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "none" }], { duration: 300, delay: 820 });
+    this.play(hintEl, [{ opacity: 0 }, { opacity: .85 }], { duration: 400, delay: 950 });
+    await this.play(flap, [{ transform: "rotateX(118deg)", opacity: 0 }, { transform: "rotateX(0deg)", opacity: 1 }], { duration: 800, delay: 260, easing: "cubic-bezier(.5,0,.75,.2)" });
+    bag.style.background = ""; this.clear();
+  },
+  /** The clasp snaps shut: the moment the bag boops. */
+  async snap() {
+    if (!reduceMotion()) await finished($("#clasp").animate([{ transform: "scale(1)" }, { transform: "scale(.84)" }, { transform: "scale(1.04)" }, { transform: "scale(1)" }], { duration: 360, easing: EASE }), { duration: 360 });
+    await boop();
+  },
+  /** Hand the closed bag to someone else: it slides away and a "new" bag slides in. */
+  async handOver() {
+    if (reduceMotion()) return;
+    await finished(this.el.animate([{ transform: "none" }, { transform: "translateX(-105%) rotate(-3deg)" }], { duration: 520, easing: "cubic-bezier(.6,0,.8,.3)" }), { duration: 520 });
+    await finished(this.el.animate([{ transform: "translateX(105%) rotate(3deg)" }, { transform: "none" }], { duration: 620, easing: EASE }), { duration: 620 });
+  },
+};
+function bagFace() {
+  if (!S.data?.bag?.id) return Bag.setFace("Keepsake", "", "Press the clasp to begin");
+  Bag.setFace(S.data.bag.name, `Carried by ${currentOwner().name}`, "Press the clasp to open");
+}
+
+/* ---------- example data (clearly marked) ---------- */
+async function makeExample(myName = "You") {
+  const key = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const bag = { id: b64url(crypto.getRandomValues(new Uint8Array(8))), key, name: "Keepsake", claimedAt: Date.UTC(1998, 5, 2) };
+  const owners = [
+    { gen: 1, name: "Lena", since: Date.UTC(1998, 5, 2) },
+    { gen: 2, name: myName, since: Date.now() },
+  ];
+  const ex = [
+    { place: PLACES[1], at: Date.UTC(1998, 5, 14), author: "Lena", text:
+      "Where are we? The top of the hill, by the statue.\nWho was here? Your grandfather and me, and a thermos of chai that went cold.\nWhat do you want them to know? We decided to stay in this city right here, on this bench. When the bells from downtown reach you, that's the sound we heard." },
+    { place: PLACES[2], at: Date.UTC(2003, 9, 4), author: "Lena", text:
+      "The bakery with the blue awning. Buy the anise cookies, eat one on the walk home, and don't tell anyone how many you had. I never did." },
+    { place: PLACES[3], at: Date.UTC(2011, 3, 23), author: "Lena", text:
+      "I taught your mother to ride a bike on this path. She fell twice and laughed both times. Be brave the way she was." },
+  ];
+  const memories = [];
+  for (const e of ex) {
+    const box = await seal(key, { kind: "note", text: e.text, author: e.author, at: e.at }, null);
+    memories.push({ id: uid(), gen: 1, author: e.author, kind: "note", at: e.at, place: { name: e.place.name, lat: e.place.lat, lng: e.place.lng }, radius: 75, armed: true, box, responses: [] });
+  }
+  return { bag, owners, memories, isExample: true, onboarded: true };
+}
+
+/* ---------- rings (legacy motif) ---------- */
+function ringsSVG() {
+  const { owners, memories } = S.data;
+  const G = owners.length, C = 160, core = 44;
+  const step = Math.min(56, (146 - core) / Math.max(1, G - 1 + 0.4));
+  const radiusFor = (g) => (g === 1 ? 0 : core + step * (g - 1));
+  let s = `<svg class="rings" viewBox="0 0 320 320" role="img" aria-label="${G} generation${G > 1 ? "s" : ""} of memories, drawn as growth rings">`;
+  // Center: first owner's chapter
+  s += `<circle cx="${C}" cy="${C}" r="${core}" fill="var(--core)" opacity=".95"/>`;
+  s += `<circle cx="${C}" cy="${C}" r="${core - 7}" fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="3 4"/>`;
+  for (let g = 2; g <= G; g++) {
+    const r = radiusFor(g), isOuter = g === G;
+    const cls = S.justPassed && isOuter ? ' class="ring-new"' : "";
+    if (isOuter) {
+      // Outer ring with an open gap: your chapter
+      const gapDeg = 46, a0 = (-90 + gapDeg / 2) * Math.PI / 180, a1 = (270 - gapDeg / 2) * Math.PI / 180;
+      const p = (a) => `${C + r * Math.cos(a)} ${C + r * Math.sin(a)}`;
+      s += `<path${cls} d="M ${p(a0)} A ${r} ${r} 0 1 1 ${p(a1)}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>`;
+      s += `<path d="M ${p(a1)} A ${r} ${r} 0 0 1 ${p(a0)}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="2 5" opacity=".7"/>`;
+      s += `<text x="${C}" y="${C - r - 10}" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-style="italic" font-size="15" fill="var(--accent)">your chapter</text>`;
+    } else {
+      s += `<circle${cls} cx="${C}" cy="${C}" r="${r}" fill="none" stroke="var(--line)" stroke-width="2"/>`;
+    }
+    s += `<circle cx="${C}" cy="${C}" r="${r - 5}" fill="none" stroke="var(--line)" stroke-width=".8" stroke-dasharray="2 4" opacity=".6"/>`;
+  }
+  if (G === 1) {
+    s += `<text x="${C}" y="${C + core + 22}" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-style="italic" font-size="15" fill="var(--accent)">your chapter begins here</text>`;
+  }
+  // Memory marks
+  for (let g = 1; g <= G; g++) {
+    const mems = memories.filter((m) => m.gen === g);
+    const r = g === 1 ? core - 20 : radiusFor(g);
+    const isOuter = g === G && G > 1;
+    const span = isOuter ? 300 : 360, start = isOuter ? -90 + 30 : -90;
+    mems.forEach((m, i) => {
+      const a = (start + (span * (i + 0.5)) / Math.max(mems.length, isOuter ? 6 : 1)) * Math.PI / 180;
+      const x = C + r * Math.cos(a), y = C + r * Math.sin(a);
+      const open = S.opened.has(m.id), fresh = S.justSealed === m.id;
+      s += `<g class="mark" data-mem="${m.id}" role="button" tabindex="0" aria-label="${esc(m.author)}'s ${m.kind} at ${esc(m.place.name)}, ${fmtDate(m.at)}${open ? ", open" : ", sealed"}">
+        <circle cx="${x}" cy="${y}" r="16" fill="transparent"/>
+        <circle${fresh ? ` class="grow${S.growLate ? " late" : ""}"` : ""} cx="${x}" cy="${y}" r="${open ? 8 : 6.5}" fill="${open ? "var(--accent)" : "var(--line)"}" stroke="var(--bg)" stroke-width="2"/>
+      </g>`;
+    });
+  }
+  return s + "</svg>";
+}
+
+/* ---------- views ---------- */
+const icons = {
+  photo: '<svg viewBox="0 0 48 48"><rect x="6" y="12" width="36" height="26" rx="4"/><circle cx="24" cy="25" r="7"/><path d="M17 12l3-5h8l3 5"/></svg>',
+  voice: '<svg viewBox="0 0 48 48"><rect x="18" y="6" width="12" height="22" rx="6"/><path d="M11 23a13 13 0 0 0 26 0M24 36v6M17 42h14"/></svg>',
+  note:  '<svg viewBox="0 0 48 48"><path d="M12 6h18l8 8v28H12z"/><path d="M30 6v8h8M18 24h14M18 30h14M18 36h9"/></svg>',
+  rings: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="5"/><circle cx="24" cy="24" r="12"/><path d="M24 4a20 20 0 1 1-14.1 5.9" stroke-dasharray="3 3"/></svg>',
+  nfc:   '<svg viewBox="0 0 48 48"><rect x="14" y="16" width="16" height="28" rx="3"/><path d="M19 20h6"/><path d="M33 9a10 10 0 0 1 0 12M37 5a16 16 0 0 1 0 20M29 12a5 5 0 0 1 0 6"/></svg>',
+  bag:   '<svg viewBox="0 0 48 48"><path d="M8 18h32l-2 22H10z"/><path d="M8 18c0-6 7-10 16-10s16 4 16 10"/><circle cx="24" cy="25" r="3"/></svg>',
+};
+const kindWord = { photo: "photo", voice: "recording", note: "note" };
+
+function topbar(back) {
+  const b = S.data.bag;
+  return `<div class="topbar">
+    ${back ? `<button class="link" data-go="${back}">← Back</button>` : `<span class="eyebrow">${esc(b.name)}</span>`}
+    ${S.data.isExample ? `<span class="pill">Example bag</span>` : `<span class="pill">Generation ${currentOwner().gen}</span>`}
+  </div>`;
+}
+
+function viewClaim() {
+  const step = S.view.step || "tap";
+  if (step === "tap") return `
+    <div class="stack" style="padding-top:24px">
+      <span class="eyebrow">Keepsake</span>
+      <h1>${S.waitTap ? "Now tap the tag." : "Give your bag its key."}</h1>
+      <p class="muted">${S.waitTap ? "Hold the top of your iPhone to the tag you just wrote. When the banner appears, tap it." : "Inside the leather is a small tag. It will hold the key to every memory you keep in this bag. Nothing else can open them."}</p>
+    </div>
+    ${S.claimBag ? tagSetupBlock(S.claimBag) : ""}
+    ${S.waitTap ? tagPrompt(S.waitTap.label) : `<button class="btn primary" data-action="claim-start">Make this bag's key</button>`}`;
+  if (step === "name") return `
+    <div class="stack" style="padding-top:24px">
+      <span class="eyebrow">Your bag</span>
+      <h2>What should we call it?</h2>
+      <div><label for="bagName">Bag name</label><input id="bagName" type="text" value="My bag" autocomplete="off"></div>
+      ${S.ob.name ? "" : `<div><label for="ownerName">Your name</label><input id="ownerName" type="text" value="" placeholder="The first chapter is yours" autocomplete="off"></div>`}
+    </div>
+    <button class="btn primary" data-action="claim-name">Continue</button>`;
+  return `
+    <div class="stack" style="padding-top:24px">
+      <span class="eyebrow">How it works</span>
+      <h2>Memories that wait for their place.</h2>
+      <p>Save a photo, a recording or a few words where something happened. Seal it to the bag.</p>
+      <p>Years from now, whoever carries this bag can come back to that place, tap it, and the memory opens. The bag gives a small buzz to say it's there.</p>
+      <p class="muted">Every person who carries the bag adds a chapter. Yours is the first.</p>
+    </div>
+    <button class="btn primary" data-go="home">Open the bag</button>`;
+}
+
+function viewHome() {
+  const { owners, memories } = S.data;
+  const me = currentOwner();
+  let html = `<div class="topbar"><button class="link" data-action="close-bag">Close the bag</button>${S.data.isExample ? `<span class="pill">Example bag</span>` : `<span class="pill">Generation ${me.gen}</span>`}</div>${pretendNote()}`;
+  html += `<div class="stack"><h1>${esc(S.data.bag.name)}</h1>
+    <p class="muted">${sentence(`Carried by ${owners.map((o) => esc(o.name)).join(", then ")}`)} ${memories.length} memor${memories.length === 1 ? "y" : "ies"} sealed.</p></div>`;
+  html += ringsSVG();
+  const waiting = arrivalHere();
+  html += waiting || S.waitTap
+    ? tagPrompt(S.waitTap ? S.waitTap.label : `${poss(waiting.author)} memory waits here`, true)
+    : `<div class="tag-prompt"><div class="deboss small" data-bag aria-hidden="true">${icons.nfc}</div>
+        <p class="muted small">${here() ? `No memory waits here. ${nearestText()}` : "When you reach a memory's place, the bag buzzes. Then tap your phone to its tag."}</p></div>`;
+  if (!S.data.tagSeenAt) html += `<section class="pocket stack" aria-label="Your bag's tag">
+      <div class="chapter-head"><h3>Connect your bag's tag</h3><span class="muted small">NFC</span></div>
+      <p class="small">Write this bag's link onto the NFC tag inside it, once. Then tapping the bag with your iPhone opens Keepsake, and opens the memory that waits where you're standing.</p>
+      <button class="btn" data-action="tag-open">Set up the tag</button>
+    </section>`;
+  html += `<button class="btn primary" data-go="save">Save a memory</button>`;
+  if (memories.length) html += `<button class="btn" data-go="map">See where they wait</button>`;
+  html += `<hr class="stitch"><div class="chapters">`;
+  for (const o of [...owners].reverse()) {
+    const mems = memories.filter((m) => m.gen === o.gen);
+    const mine = o.gen === me.gen;
+    html += `<section class="pocket" aria-label="${poss(o.name)} chapter${mine ? ", yours" : ""}"><div class="chapter-head"><h3>${poss(o.name)} chapter${mine ? '<span class="you-tag">you</span>' : ""}</h3><span class="muted small">Generation ${o.gen}</span></div>`;
+    if (!mems.length) html += `<div class="gap-note">${o.gen === me.gen ? "Still open. Add your chapter." : "No memories yet."}</div>`;
+    for (const m of mems) {
+      const open = S.opened.has(m.id);
+      html += `<button class="mem-btn" data-mem="${m.id}"><i class="dot ${open ? "open" : ""}"></i>
+        <span><b>${esc(m.place.name)}</b><br><span class="muted small">${poss(m.author)} ${kindWord[m.kind]}${m.responses.length ? ` · ${m.responses.length} added` : ""}</span></span>
+        <span class="meta">${fmtDate(m.at)}</span></button>`;
+    }
+    html += `</section>`;
+  }
+  html += `</div><hr class="stitch">
+    <div class="row"><button class="btn" data-go="pass">Pass it down</button><button class="btn" data-go="privacy">Settings &amp; privacy</button></div>`;
+  return html;
+}
+
+function viewSave() {
+  const v = S.view, d = (v.draft ||= { kind: null, text: "", media: null, mime: "", mediaUrl: "", author: currentOwner().name, placeName: "" });
+  const step = v.step || "kind";
+  let h = topbar(step === "kind" ? "home" : null);
+  if (step === "kind") {
+    h += `<div class="stack"><span class="eyebrow">Save a memory</span><h2>What would you like to keep?</h2></div>
+      <div class="stack">
+        <button class="choice" data-kind="voice">${icons.voice}<span><b>Speak it</b><span class="muted small">Record your voice. No typing needed.</span></span></button>
+        <button class="choice" data-kind="photo">${icons.photo}<span><b>A photo</b><span class="muted small">Take one now or choose one.</span></span></button>
+        <button class="choice" data-kind="note">${icons.note}<span><b>Write it down</b><span class="muted small">A few words for whoever comes next.</span></span></button>
+      </div>`;
+  } else if (step === "capture") {
+    h = `<div class="topbar"><button class="link" data-step="kind">← Back</button><span class="pill">${kindWord[d.kind]}</span></div>`;
+    h += `<div class="prompts" aria-label="Prompts"><span>Where are we?</span><span>Who was here?</span><span>What do you want them to know?</span></div>`;
+    if (d.kind === "voice") {
+      const recording = !!rec.mr;
+      h += `<input id="fileVoice" type="file" accept="audio/*" hidden>
+        <button class="record ${recording ? "recording" : ""}" data-action="record" aria-pressed="${recording}">${recording ? `Tap to stop<br><span id="recTime" class="mono" style="font-size:16px">0:00</span>` : d.media ? "Record<br>again" : "Tap to<br>record"}</button>
+        <p class="muted small" style="text-align:center">${recording ? "Take your time. Answer one question, or all three." : "Your own voice, just as it is."}</p>
+        ${d.mediaUrl && !recording ? `<audio controls src="${d.mediaUrl}"></audio>` : ""}
+        <button class="link" data-pick="fileVoice" style="align-self:center">Or choose a recording you already have</button>`;
+    } else if (d.kind === "photo") {
+      h += `<input id="filePhoto" type="file" accept="image/*" hidden>
+        <button class="btn" data-pick="filePhoto">${d.media ? "Choose a different photo" : "Take or choose a photo"}</button>
+        ${d.mediaUrl ? `<div class="preview"><img src="${d.mediaUrl}" alt="The photo you chose"></div>` : ""}
+        <div><label for="caption">A few words (optional)</label><textarea id="caption" style="min-height:90px">${esc(d.text)}</textarea></div>`;
+    } else {
+      h += `<div><label for="noteText">Your note</label><textarea id="noteText" placeholder="Answer as much or as little as you like.">${esc(d.text)}</textarea></div>`;
+    }
+    h += `<div><label for="author">Who's adding this?</label><input id="author" type="text" value="${esc(d.author)}"></div>
+      <button class="btn primary" data-action="capture-next">Next: the place</button>`;
+  } else if (step === "place") {
+    const p = here();
+    if (!p) {
+      const denied = Loc.status === "denied" || Loc.status === "unavailable";
+      h += `<div class="stack"><span class="eyebrow">The place</span><h2>${denied ? "Keepsake can't see where you are." : "Finding where you are…"}</h2>
+        <p class="muted">${denied ? "Turn on location for Keepsake in your phone's Settings, or pick a pretend place in the Virtual bag panel." : Loc.status === "off" ? "Keepsake needs your location to seal this memory to this spot." : "This takes a few seconds outdoors, a little longer inside."}</p></div>
+        ${Loc.status === "off" ? `<button class="btn primary" data-action="allow-location">Use my location</button>` : ""}`;
+      return h;
+    }
+    const key = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
+    if (d.placeFor !== key && !d.placeTyped) { d.placeFor = key; suggestPlaceName(p, d); }
+    h += `<div class="stack"><span class="eyebrow">The place</span><h2>This memory will wait here.</h2>
+      <p class="coords">${fmtCoords(p)}${p.pretend ? " · pretend place" : p.acc ? ` · accurate to ${Math.round(p.acc)} m` : ""}</p>
+      <div><label for="placeName">What is this place?</label><input id="placeName" type="text" value="${esc(d.placeName)}" placeholder="${d.naming ? "Finding its name…" : "Name this place"}" autocomplete="off"></div>
+      <p>It will open within <b>${S.sim.radius} m</b> of this spot, and only after you've left and come back. That includes you.</p></div>
+      <button class="btn primary" data-step="seal">Next: seal it</button>`;
+  } else if (step === "seal") {
+    h += `<div class="stack"><span class="eyebrow">Seal</span><h2>${S.waitTap ? "Now hold your phone to the bag." : "Press and hold to seal this memory."}</h2>
+      <p class="muted">${S.waitTap ? "The key goes from the bag to this memory. After this, only the bag can open it, and only here." : `Sealed to the bag at ${esc(d.placeName)}.`}</p></div>`;
+    h += S.waitTap
+      ? tagPrompt(S.waitTap.label)
+      : `<button class="btn primary hold" id="holdSeal" aria-describedby="holdHint"><i class="fill"></i><span>Seal this memory</span></button>
+         <p id="holdHint" class="muted small" style="text-align:center">Keep pressing for about a second and a half.</p>`;
+  }
+  return h;
+}
+
+function viewMemory() {
+  const m = S.data.memories.find((x) => x.id === S.view.id);
+  if (!m) return viewHome();
+  const o = S.opened.get(m.id);
+  const c = placeCheck(m);
+  let h = topbar(S.view.from || "home") + pretendNote();
+  h += `<div class="stack"><span class="eyebrow">${esc(m.author)} · ${fmtDate(m.at)}</span><h2>${esc(m.place.name)}</h2></div>`;
+  if (!o) {
+    const status = m.armed === false
+      ? (c.inside ? "Sealed here just now. It opens when you come back: leave this place, then return." : `Sealed. It opens when you're back at ${esc(m.place.name)}. You're ${fmtDist(c.dist)} away.`)
+      : !c.known ? "Finding where you are…"
+      : c.inside ? "You're here. Your bag is buzzing: tap your phone to its tag to open this."
+      : `This opens at ${esc(m.place.name)}. You're ${fmtDist(c.dist)} away.`;
+    h += `<div class="memory-card"><div class="locked">
+        <div class="lock-ring" data-bag>${icons[m.kind].replace("<svg", '<svg width="34" height="34" style="stroke:var(--primary);fill:none;stroke-width:1.6"')}</div>
+        <h3>Sealed ${kindWord[m.kind]}</h3>
+        <p class="muted">${status}</p>
+      </div></div>`;
+    if (S.waitTap) h += tagPrompt(S.waitTap.label);
+    else if (c.inside && m.armed !== false) h += tagPrompt("Tap your phone to the bag's tag to open it");
+    if (S.view.notHere) h += `<div class="notice bad" role="alert">${S.view.notHere === "unarmed" ? "This memory was sealed here a moment ago. It stays closed until you've left and come back." : S.view.notHere === "unknown" ? "Keepsake doesn't know where you are yet. Check that location is on, then try again." : `Not here yet. This memory opens within ${m.radius} m of ${esc(m.place.name)}, and you're ${fmtDist(c.dist)} away.`}</div>`;
+    return h;
+  }
+  h += `<div class="memory-card ${S.view.reveal ? "reveal" : ""}">${mediaBlock(o)}${o.meta.text ? `<div class="memory-text">${esc(o.meta.text)}</div>` : ""}</div>`;
+  for (const r of m.responses) {
+    const ro = S.opened.get(r.id);
+    if (!ro) continue;
+    h += `<div class="response"><span class="eyebrow">${esc(r.author)} added · ${fmtDate(r.at)}</span>${mediaBlock(ro)}${ro.meta.text ? `<div class="memory-text" style="font-size:22px">${esc(ro.meta.text)}</div>` : ""}</div>`;
+  }
+  if (S.view.respond) {
+    const d = (S.view.rdraft ||= { text: "", author: "" });
+    h += `<hr class="stitch"><div class="stack"><h3>Add to ${poss(m.author)} memory</h3>
+      <p class="muted small">Answer them. What do you remember? What happened here since?</p>
+      <div><label for="respAuthor">Your name</label><input id="respAuthor" type="text" value="${esc(d.author)}" placeholder="Who's adding this?"></div>
+      <div><label for="respText">Your words</label><textarea id="respText">${esc(d.text)}</textarea></div>
+      <button class="btn primary" data-action="respond-seal" data-id="${m.id}">Seal it with theirs</button>
+      <button class="link" data-action="respond-cancel">Not now</button></div>`;
+  } else {
+    h += `<button class="btn primary" data-action="respond" data-id="${m.id}">Continue this memory</button>
+      <p class="muted small" style="text-align:center">It closes again when you leave this page or walk away.</p>`;
+  }
+  return h;
+}
+function mediaBlock(o) {
+  if (!o.mediaUrl) return "";
+  if (o.meta.kind === "photo") return `<img src="${o.mediaUrl}" alt="Photo by ${esc(o.meta.author)}" style="width:100%;border-radius:12px;display:block">`;
+  if (o.meta.kind === "voice") return `<audio controls src="${o.mediaUrl}"></audio>`;
+  return "";
+}
+
+function viewPass() {
+  const me = currentOwner();
+  let h = topbar("home");
+  if (S.view.done) {
+    return h + `<div class="stack"><span class="eyebrow">Generation ${me.gen}</span><h2>The bag is ${esc(me.name)}'s now.</h2>
+      <p>Every memory that came before is still sealed in its place. ${esc(me.name)} can open them by going there and tapping the bag.</p>
+      <p class="muted">A new ring has started, with room for ${esc(me.name)}'s chapter.</p></div>
+      <button class="btn primary" data-go="save">Add your chapter</button>
+      <button class="btn" data-go="home">See the rings</button>`;
+  }
+  h += `<div class="stack"><span class="eyebrow">Pass it down</span><h2>Who are you giving the bag to?</h2>
+    <p class="muted">They'll be able to open every memory in it, at its place. You can't take this back once the bag is in their hands.</p>
+    <div><label for="nextOwner">Their name</label><input id="nextOwner" type="text" value="${esc(S.view.next || "")}" placeholder="For example, Maya"></div></div>`;
+  h += S.waitTap
+    ? `<p><b>Hand them the bag.</b> On their phone, they tap the bag's tag.</p>${tagPrompt(S.waitTap.label)}`
+    : `<button class="btn primary hold" id="holdPass"><i class="fill"></i><span>Press and hold to pass it down</span></button>`;
+  return h;
+}
+
+function viewPrivacy() {
+  const { memories, bag } = S.data;
+  const bytes = memories.reduce((n, m) => n + m.box.ct.byteLength + m.responses.reduce((k, r) => k + r.box.ct.byteLength, 0), 0);
+  const sample = memories[0]?.box.ct.subarray(0, 48);
+  const hex = sample ? Array.from(sample, (b) => b.toString(16).padStart(2, "0")).join(" ") + " …" : "nothing yet";
+  const code = bag.key.match(/.{1,4}/g).join(" ");
+  let h = topbar("home");
+  h += `<div class="stack"><span class="eyebrow">Settings &amp; privacy</span><h2>You, and what's kept.</h2></div>
+    <div class="stack">
+      <div><label for="myName">Your name</label><input id="myName" type="text" value="${esc(currentOwner().name)}" autocomplete="given-name"></div>
+      <button class="btn" data-action="save-name">Save my name</button>
+      <p class="muted small">Your chapter (generation ${currentOwner().gen}) is signed with this name.</p>
+    </div>
+    <hr class="stitch">
+    <div class="stack">
+      <h3>Your bag's tag</h3>
+      <p class="muted small">${S.data.tagSeenAt ? `Last tapped ${new Date(S.data.tagSeenAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.` : "Not set up yet. Write this bag's link onto the tag once, and tapping it opens Keepsake."}</p>
+      <button class="btn" data-action="tag-setup">${S.view.tagSetup ? "Hide the steps" : S.data.tagSeenAt ? "Write another tag" : "Set up the tag"}</button>
+      ${S.view.tagSetup ? tagSetupBlock(S.data.bag) : ""}
+    </div>
+    <hr class="stitch">
+    <div>
+      <div class="kv"><b>In the bag</b><span>The bag's ID and its key. Nothing else. No battery, no tracking.</span></div>
+      <div class="kv"><b>On this phone</b><span>${memories.length} sealed memor${memories.length === 1 ? "y" : "ies"} (${(bytes / 1024).toFixed(1)} KB), encrypted with AES-256. In this prototype they're stored in this browser only.</span></div>
+      <div class="kv"><b>Your location</b><span>Used only while the app is open, to seal a memory to a spot and to check you're back there. It isn't stored or sent anywhere${window.ReactNativeWebView ? ", except to Apple Maps once per memory to suggest the place's name" : ""}.</span></div>
+      <div class="kv"><b>In the cloud</b><span>Nothing yet. When sync arrives it will hold only the sealed files, never the key.</span></div>
+      <div class="kv"><b>What a sealed memory looks like</b><span class="mono">${hex}</span></div>
+      <div class="kv"><b>Recovery code</b><span class="muted small">If the bag's patch is ever lost, this code opens everything. Write it down and keep it somewhere safe.</span><span class="mono" id="recCode">${code}</span>
+        <button class="link" data-action="copy-code" style="justify-self:start">Copy the code</button></div>
+    </div>
+    <button class="btn primary" data-action="export" id="exportBtn">Export everything</button>
+    <p class="muted small" id="exportNote">Photos as JPG, recordings as WAV, words as TXT, in one .zip. No special app needed to open them.</p>
+    <hr class="stitch">`;
+  if (S.view.confirmDelete) {
+    h += `<div class="notice bad stack" role="alert"><b>Delete everything on this phone?</b><span>The sealed memories and the key will be erased here. The bag itself keeps its key, but these memories can't come back unless you exported them.</span>
+      <div class="row"><button class="btn primary" data-action="delete-yes" style="background:var(--warn);border-color:var(--warn)">Delete everything</button><button class="btn" data-action="delete-no">Keep them</button></div></div>`;
+  } else {
+    h += `<div class="row"><button class="btn" data-action="new-bag">Start with a new bag</button><button class="btn" data-action="delete">Delete everything</button></div>`;
+    h += `<p class="muted small" style="text-align:center">Keepsake web · version ${BUILD.startsWith("__") ? "preview" : BUILD} · with NFC tags</p>`;
+  }
+  return h;
+}
+
+/* ---------- first launch: who you are, where you are, which bag ---------- */
+function viewWelcome() {
+  const step = S.view.step || "hello";
+  if (step === "hello") return `
+    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>A bag that remembers.</h1>
+      <p>Seal a photo, your voice or a few words to the place where something happened.</p>
+      <p>It waits there. Whoever carries this bag later can come back, tap it, and the memory opens.</p>
+      <p class="muted">Each person who carries the bag adds a chapter.</p></div>
+    <button class="btn primary" data-ob="name">Begin</button>`;
+  if (step === "name") return `
+    <div class="stack onboard"><span class="eyebrow">1 of 3</span><h2>What's your name?</h2>
+      <p class="muted">Your chapter is signed with it. You can change it later in Settings.</p>
+      <div><label for="obName">Your name</label><input id="obName" type="text" value="${esc(S.ob.name)}" autocomplete="given-name" enterkeyhint="next"></div></div>
+    <button class="btn primary" data-ob="location">Continue</button>`;
+  if (step === "location") return `
+    <div class="stack onboard"><span class="eyebrow">2 of 3</span><h2>Memories live in places.</h2>
+      <p>Keepsake uses your phone's location to seal a memory to the spot where you're standing, and to open it only when someone is back there.</p>
+      <p class="muted">Only while the app is open. Your location stays on this phone and is never tracked in the background.</p></div>
+    <button class="btn primary" data-action="ob-allow">Allow location</button>
+    <button class="link" data-ob="bag" style="align-self:center">Not now</button>`;
+  return `
+    <div class="stack onboard"><span class="eyebrow">3 of 3</span><h2>Which bag are you holding${S.ob.name ? `, ${esc(S.ob.name)}` : ""}?</h2></div>
+    <div class="stack">
+      ${S.ob.tag ? `<button class="choice" data-action="ob-tagbag">${icons.bag}<span><b>The bag you just tapped</b><span class="muted small">Its tag already holds a key. Make it yours.</span></span></button>` : ""}
+      <button class="choice" data-action="ob-example">${icons.rings}<span><b>Lena's bag</b><span class="muted small">An example bag, passed down to you. Three of her memories wait around Providence.</span></span></button>
+      <button class="choice" data-action="ob-new">${icons.bag}<span><b>A new bag</b><span class="muted small">Begin the first chapter yourself.</span></span></button>
+    </div>`;
+}
+function obStep(step) {
+  if (S.view.step === "name") {
+    const v = $("#obName")?.value.trim() || "";
+    if (!v && step !== "name") { toast("Add your name first."); return; }
+    S.ob.name = v;
+  }
+  S.view = { name: "welcome", step };
+  render(); window.scrollTo({ top: 0 });
+  if (!reduceMotion()) $("#app").animate([{ opacity: 0, transform: "translateY(24px)" }, { opacity: 1, transform: "none" }], { duration: 480, easing: EASE });
+  if (step === "name") $("#obName")?.focus();
+}
+async function finishOnboarding(data) {
+  S.data = data; S.opened.clear(); persist();
+  S.view = { name: "home" }; render(); bagFace();
+  // Now the bag is theirs: it closes, and they open it.
+  await Bag.close("Press the clasp to open");
+  await Bag.waitForClasp();
+  await Bag.open();
+}
+
+/* ---------- where they wait: the globe ---------- */
+// Memories that sit close together on the ground share one light on the globe.
+function placeGroups() {
+  const groups = [];
+  for (const m of S.data.memories) {
+    const g = groups.find((x) => haversine(x, m.place) < 300);
+    if (g) g.ids.push(m.id); else groups.push({ lat: m.place.lat, lng: m.place.lng, name: m.place.name, ids: [m.id] });
+  }
+  return groups;
+}
+function viewMap() {
+  const ms = S.data.memories, groups = placeGroups();
+  let h = topbar("home");
+  h += `<div class="stack"><span class="eyebrow">Where they wait</span><h2>${ms.length} memor${ms.length === 1 ? "y" : "ies"}, ${groups.length} place${groups.length === 1 ? "" : "s"}.</h2>
+    <p class="muted">Turn the globe with your finger. Tap a light to see what waits there.</p></div>
+    <div class="globe-wrap"><canvas id="globe" role="img" aria-label="A globe with ${groups.length} lit place${groups.length === 1 ? "" : "s"} where memories are sealed. The same places are listed below."></canvas>
+      <div class="globe-zoom"><button data-action="zoom-in" aria-label="Zoom in">+</button><button data-action="zoom-out" aria-label="Zoom out">−</button></div></div>
+    <div id="localPanel" aria-live="polite"></div>
+    <hr class="stitch"><div class="chapters"><section class="pocket" aria-label="Places"><div class="chapter-head"><h3>Places</h3></div>`;
+  groups.forEach((g, i) => {
+    const c = here() ? fmtDist(haversine(here(), g)) + " away" : "";
+    h += `<button class="mem-btn" data-place="${i}"><i class="dot"></i><span><b>${esc(g.name)}</b><br><span class="muted small">${g.ids.length} memor${g.ids.length === 1 ? "y" : "ies"}</span></span><span class="meta">${c}</span></button>`;
+  });
+  return h + `</section></div>`;
+}
+
+/** A close-up of one area: the memories around it, where you are, and how big each place's circle is. */
+function localPanel(center) {
+  const near = S.data.memories.filter((m) => haversine(center, m.place) < 25000);
+  const me = here();
+  const pts = near.map((m) => ({ m, lat: m.place.lat, lng: m.place.lng }));
+  const meNear = me && haversine(center, me) < 25000;
+  const all = [...pts, ...(meNear ? [{ lat: me.lat, lng: me.lng }] : [])];
+  const lat0 = all.reduce((a, p) => a + p.lat, 0) / all.length, lng0 = all.reduce((a, p) => a + p.lng, 0) / all.length;
+  const k = Math.cos((lat0 * Math.PI) / 180);
+  const xy = (p) => ({ x: (p.lng - lng0) * k * 111320, y: -(p.lat - lat0) * 111320 }); // metres, north up
+  const P = all.map(xy);
+  const span = Math.max(400, ...P.map((p) => Math.abs(p.x) * 2), ...P.map((p) => Math.abs(p.y) * 2 * 1.35)) * 1.25;
+  const W = 320, H = 236, sc = W / span;
+  const sx = (p) => W / 2 + xy(p).x * sc, sy = (p) => H / 2 + xy(p).y * sc;
+  const nice = [100, 200, 500, 1000, 2000, 5000, 10000].find((d) => d * sc > 50) || 10000;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Close-up of ${near.length} memor${near.length === 1 ? "y" : "ies"} around ${esc(near[0]?.place.name || "here")}">
+    <rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="14" fill="none" stroke="var(--line)" stroke-dasharray="4 4" opacity=".7"/>
+    <text x="${W - 22}" y="26" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-size="16" fill="var(--muted)">N</text>
+    <path d="M ${W - 22} 32 l 0 14 M ${W - 26} 36 l 4 -4 l 4 4" stroke="var(--muted)" fill="none" stroke-width="1.2"/>
+    <path d="M 20 ${H - 22} h ${nice * sc}" stroke="var(--fg)" stroke-width="2"/>
+    <text x="20" y="${H - 28}" font-family="DM Sans, sans-serif" font-size="11" fill="var(--muted)">${fmtDist(nice)}</text>`;
+  const placed = []; // label boxes already drawn, so labels don't sit on each other
+  if (meNear) placed.push({ x: sx(me) - 14, y: sy(me) + 8, w: 28, h: 16 });
+  for (const { m } of pts) {
+    const x = sx(m.place), y = sy(m.place), r = Math.max(3, m.radius * sc);
+    const label = m.place.name.length > 24 ? m.place.name.slice(0, 23) + "…" : m.place.name;
+    const lw = label.length * 5.6 + 6;
+    const anchor = x < lw / 2 + 10 ? "start" : x > W - lw / 2 - 10 ? "end" : "middle";
+    const lx = anchor === "start" ? Math.max(10, x - 6) : anchor === "end" ? Math.min(W - 10, x + 6) : x;
+    const left = anchor === "start" ? lx : anchor === "end" ? lx - lw : lx - lw / 2;
+    const hitsBox = (ty) => placed.some((b) => left < b.x + b.w && left + lw > b.x && ty - 12 < b.y + b.h && ty > b.y);
+    let ly = y - 11;
+    if (hitsBox(ly)) ly = y + 21;
+    for (let k = 0; hitsBox(ly) && k < 4; k++) ly += 14;
+    placed.push({ x: left, y: ly - 12, w: lw, h: 14 });
+    const open = placeCheck(m).inside && m.armed !== false;
+    svg += `<g class="pin" data-mem="${m.id}" tabindex="0" role="button" aria-label="${esc(m.author)}'s ${kindWord[m.kind]} at ${esc(m.place.name)}">
+      <circle cx="${x}" cy="${y}" r="${r}" fill="var(--accent)" opacity=".12" stroke="var(--accent)" stroke-dasharray="2 3"/>
+      <circle class="core" cx="${x}" cy="${y}" r="${open ? 7 : 5.5}" fill="${open ? "var(--accent)" : "var(--line)"}" stroke="var(--bg)" stroke-width="2"/>
+      <text x="${lx}" y="${ly}" text-anchor="${anchor}" font-family="DM Sans, sans-serif" font-size="11" fill="var(--fg)" paint-order="stroke" stroke="var(--surface)" stroke-width="3">${esc(label)}</text></g>`;
+  }
+  if (meNear) svg += `<circle cx="${sx(me)}" cy="${sy(me)}" r="6" fill="var(--bg)" stroke="var(--heading)" stroke-width="2.5"/><text x="${sx(me)}" y="${sy(me) + 20}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="var(--heading)">You</text>`;
+  svg += "</svg>";
+  const list = near.map((m) => { const c = placeCheck(m); return `<button class="mem-btn" data-mem="${m.id}"><i class="dot ${c.inside && m.armed !== false ? "open" : ""}"></i><span><b>${esc(m.place.name)}</b><br><span class="muted small">${poss(m.author)} ${kindWord[m.kind]} · ${fmtDate(m.at)}</span></span><span class="meta">${c.known ? (c.inside ? "here" : fmtDist(c.dist)) : ""}</span></button>`; }).join("");
+  return `<div class="local"><h3>${esc(near[0]?.place.name || "Here")}${near.length > 1 ? ` and ${near.length - 1} more nearby` : ""}</h3>${svg}<div>${list}</div></div>`;
+}
+
+const Globe = (() => {
+  // Land as evenly spaced dots (Natural Earth 110m, public domain), stored as int16 pairs: lat×10, lng×10.
+  const LAND = (() => {
+    const b = atob(/*LAND*/"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XwDAAV8A0QFfAOIBXwD0AV8ABwNfABsEXwDpBHAAp/xwALn8cAAg/XAAMv1wAEP9cABt/3AAfv9wAJD/cACh/3AAsv9wAMP/cADV/3AA5v9wAPf/cAAJAHAAGgBwACsAcAA9AHAATgBwAF8AcABxAHAAggBwAJMAcACkAHAAtgBwAMcAcADYAHAA6gBwAPsAcAAMAXAAHgFwAC8BcABAAXAAUgFwAGMBcAB0AXAAhQFwAJcBcACoAXAA7QFwAAIDcAAUA3AA4wNwABcEcAAoBHAAOgRwAMQEcADnBIEAn/yBALD8gQBa/4EAa/+BAH3/gQCO/4EAoP+BALH/gQDD/4EA1P+BAOb/gQD3/4EACQCBABoAgQAsAIEAPQCBAE8AgQBgAIEAcgCBAIMAgQCVAIEApgCBALcAgQDJAIEA2gCBAOwAgQD9AIEADwGBACABgQAyAYEAQwGBAFUBgQBmAYEAeAGBAIkBgQCbAYEAvgGBAPgCgQAKA4EAGwOBANsDgQD+A4EAEASBACEEgQAzBIEARASBAL8EkgBv/JIAgPySAJL8kgCk/JIAtfySAGL/kgB0/5IAhf+SAJf/kgCo/5IAuv+SAMv/kgDd/5IA7v+SAAAAkgASAJIAIwCSADUAkgBGAJIAWACSAGkAkgB7AJIAjACSAJ4AkgCwAJIAwQCSANMAkgDkAJIA9gCSAAcBkgAZAZIAKwGSADwBkgBOAZIAXwGSAHEBkgCCAZIAlAGSALcBkgDJAZIA2gGSAOwBkgDzApIABQOSABYDkgDXA5IA6QOSAPsDkgAMBJIAHgSSAC8EkgBBBJIAvASjADH8owBC/KMAVPyjAGb8owB4/KMAifyjAGD/owBy/6MAhP+jAJb/owCn/6MAuf+jAMv/owDd/6MA7v+jAAAAowASAKMAIwCjADUAowBHAKMAWQCjAGoAowB8AKMAjgCjAKAAowCxAKMAwwCjANUAowDnAKMA+ACjAAoBowAcAaMALQGjAD8BowBRAaMAYwGjAHQBowCGAaMAuwGjAM0BowDfAaMA8QGjAAICowDpAqMA+wKjAAwDowAeA6MAMAOjAL4DowDPA6MA4QOjAPMDowAFBKMAFgSjACgEowC2BLQAA/y0ABX8tAAn/LQAOfy0AEv8tABd/LQAb/y0AID8tAD+/LQANP20AGn9tABf/7QAcf+0AIP/tACV/7QApv+0ALj/tADK/7QA3P+0AO7/tAAAALQAEgC0ACQAtAA2ALQASAC0AFoAtABrALQAfQC0AI8AtAChALQAswC0AMUAtADXALQA6QC0APsAtAANAbQAHwG0ADABtABCAbQAVAG0AGYBtAB4AbQArgG0AMABtADSAbQA5AG0APUBtAAHArQAGQK0ACsCtADeArQA8AK0AAIDtAAUA7QAJgO0ADgDtAC1A7QAxwO0ANkDtADrA7QA/QO0AA8EtAAhBLQAwgTFAOz5xQDn+8UA+fvFAAv8xQAd/MUAL/zFAHf8xQCK/MUALP3FAD79xQBd/8UAb//FAIH/xQCT/8UApv/FALj/xQDK/8UA3P/FAO7/xQAAAMUAEgDFACQAxQA2AMUASADFAFoAxQBtAMUAfwDFAJEAxQCjAMUAtQDFAMcAxQDZAMUA6wDFAP0AxQAPAcUAIQHFADQBxQBGAcUAWAHFAGoBxQCgAcUAsgHFAMQBxQDWAcUA6AHFAPsBxQANAsUAHwLFADECxQDmAsUA+ALFAAoDxQAcA8UALgPFAEADxQBSA8UArQPFAL8DxQDRA8UA4wPFAPUDxQAHBMUAGQTFAFAE1gDu+9YAAfzWABP81gAl/NYAk/zWAO781gBc/9YAbv/WAID/1gCS/9YApf/WALf/1gDJ/9YA2//WAO7/1gAAANYAEgDWACUA1gA3ANYASQDWAFsA1gBuANYAgADWAJIA1gCkANYAtwDWAMkA1gDbANYA7gDWAAAB1gASAdYAJAHWADcB1gBJAdYAWwHWAG0B1gCSAdYApAHWALcB1gDJAdYA2wHWAO0B1gAAAtYAEgLWACQC1gA2AtYASQLWAMkC1gDbAtYA7QLWAAAD1gASA9YAJAPWADYD1gBJA9YAWwPWAKQD1gC2A9YAyQPWANsD1gDtA9YA/wPWABIE1gAkBOcA5PvnAPb75wAJ/OcAG/znAC785wDU/OcAbP/nAH//5wCR/+cApP/nALb/5wDJ/+cA2//nAO7/5wAAAOcAEgDnACUA5wA3AOcASgDnAFwA5wBvAOcAgQDnAJQA5wCmAOcAuQDnAMsA5wDeAOcA8ADnAAIB5wAVAecAJwHnADoB5wBMAecAXwHnAJYB5wCpAecAuwHnAM4B5wDgAecA8gHnAAUC5wAXAucAKgLnADwC5wBPAucAvgLnANAC5wDiAucA9QLnAAcD5wAaA+cALAPnAD8D5wBRA+cAZAPnAHYD5wCJA+cAmwPnAK4D5wDAA+cA0gPnAOUD5wD3A+cACgTnABwE5wAvBOcAQQTnAFQE5wBmBOcAeQTnAIsE+ACk+/gAyvv4AN37+ADv+/gAAvz4ABX8+AAo/PgA9vz4AHP/+ACG//gAmf/4AKz/+AC+//gA0f/4AOT/+AD3//gACQD4ABwA+AAvAPgAQgD4AFQA+ABnAPgAegD4AI0A+ACfAPgAsgD4AMUA+ADYAPgA6gD4AP0A+AAQAfgAIwH4ADUB+ABIAfgAWwH4AIAB+ACTAfgApgH4ALkB+ADLAfgA3gH4APEB+AApAvgArAL4AL8C+ADSAvgA5QL4APcC+AAKA/gAHQP4ADAD+ABCA/gAVQP4AGgD+AB7A/gAjQP4AKAD+ACzA/gAxgP4ANgD+ADrA/gA/gP4ABEE+AAjBPgANgT4AEkE+ABcBPgAbgT4AIEE+ACUBAkBmfsJAb/7CQHR+wkB5PsJAff7CQEK/AkBHfwJATD8CQHb/AkB7vwJAYX/CQGY/wkBq/8JAb7/CQHR/wkB5P8JAff/CQEJAAkBHAAJAS8ACQFCAAkBVQAJAWgACQF7AAkBjgAJAaEACQG0AAkBxwAJAdoACQHtAAkBAAEJARMBCQEmAQkBOQEJAUwBCQFxAQkBhAEJAZcBCQGqAQkBvQEJAdABCQHjAQkBQgIJAVUCCQFoAgkBewIJAY4CCQGhAgkBtAIJAccCCQHZAgkB7AIJAf8CCQESAwkBJQMJATgDCQFLAwkBXgMJAXEDCQGEAwkBlwMJAaoDCQG9AwkB0AMJAeMDCQH2AwkBCQQJARwECQEvBAkBQQQJAVQECQFnBAkBegQJAY0ECQGgBBoBkPsaAbf7GgHK+xoB3fsaAfD7GgEE/BoBF/waASr8GgHX/BoBjP8aAaD/GgGz/xoBxv8aAdn/GgHt/xoBAAAaARMAGgEnABoBOgAaAU0AGgFgABoBdAAaAYcAGgGaABoBrQAaAcEAGgHUABoB5wAaAfoAGgEOARoBIQEaATQBGgFHARoBbgEaAYEBGgGUARoBqAEaAbsBGgHOARoB4QEaAQgCGgEbAhoBLgIaAUICGgFVAhoBaAIaAXsCGgGPAhoBogIaAbUCGgHIAhoB3AIaAe8CGgECAxoBFQMaASkD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"/*END*/), n = b.length / 2, v = new Float32Array((n / 2) * 3);
+    for (let i = 0, j = 0; i < n; i += 2, j += 3) {
+      const rd = (k) => ((b.charCodeAt(2 * k) | (b.charCodeAt(2 * k + 1) << 8)) << 16) >> 16;
+      const lat = (rd(i) / 10) * Math.PI / 180, lng = (rd(i + 1) / 10) * Math.PI / 180;
+      v[j] = Math.cos(lat) * Math.sin(lng); v[j + 1] = Math.sin(lat); v[j + 2] = Math.cos(lat) * Math.cos(lng);
+    }
+    return v;
+  })();
+  const D = Math.PI / 180;
+  const vec = (lat, lng) => [Math.cos(lat * D) * Math.sin(lng * D), Math.sin(lat * D), Math.cos(lat * D) * Math.cos(lng * D)];
+  // Leather stays leather in both themes, like the bag itself.
+  const COL = { stitch: "230,196,138", pin: "247,227,176", you: "255,244,220" };
+
+  let cv = null, ctx = null, raf = 0, W = 0, dpr = 1;
+  let lng0 = -71.4, lat0 = 25, zoom = 1, vLng = 0, vLat = 0, lastInput = 0, fly = null;
+  const ptrs = new Map(); let pinch = null, moved = 0, hits = [];
+
+  function size() {
+    if (!cv) return;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; cv.width = W * dpr; cv.height = W * dpr;
+  }
+  function project(v, lift = 1) {
+    const cL = Math.cos(lng0 * D), sL = Math.sin(lng0 * D), cP = Math.cos(lat0 * D), sP = Math.sin(lat0 * D);
+    const x1 = v[0] * cL - v[2] * sL, z1 = v[0] * sL + v[2] * cL;
+    const y2 = v[1] * cP - z1 * sP, z2 = v[1] * sP + z1 * cP;
+    const R = W * 0.42 * zoom;
+    return { x: W / 2 + x1 * R * lift, y: W / 2 - y2 * R * lift, z: z2, R };
+  }
+  function draw() {
+    const R = W * 0.42 * zoom, cx = W / 2, cy = W / 2;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, W);
+    // Shadow under the ball
+    const sh = ctx.createRadialGradient(cx, cy + R * 0.95, 0, cx, cy + R * 0.95, R * 0.9);
+    sh.addColorStop(0, "rgba(20,8,4,.28)"); sh.addColorStop(1, "rgba(20,8,4,0)");
+    ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(cx, cy + R * 0.98, R * 0.85, R * 0.16, 0, 0, 7); ctx.fill();
+    // The leather ball
+    const g = ctx.createRadialGradient(cx - R * 0.38, cy - R * 0.42, R * 0.05, cx, cy, R);
+    g.addColorStop(0, "#B0643A"); g.addColorStop(0.45, "#7A3A20"); g.addColorStop(0.85, "#4A2116"); g.addColorStop(1, "#2E140E");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+    // Stitched lines of latitude and longitude
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip();
+    ctx.strokeStyle = `rgba(${COL.stitch},.22)`; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+    const line = (pts) => { ctx.beginPath(); let on = false; for (const v of pts) { const p = project(v); if (p.z > 0) { on ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); on = true; } else on = false; } ctx.stroke(); };
+    for (let lat = -60; lat <= 60; lat += 30) line(Array.from({ length: 121 }, (_, i) => vec(lat, -180 + i * 3)));
+    for (let lng = -180; lng < 180; lng += 30) line(Array.from({ length: 61 }, (_, i) => vec(-90 + i * 3, lng)));
+    ctx.setLineDash([]);
+    // Land: dots fade and shrink toward the edge, which is what reads as a sphere
+    const buckets = [[], [], [], []];
+    const cL = Math.cos(lng0 * D), sL = Math.sin(lng0 * D), cP = Math.cos(lat0 * D), sP = Math.sin(lat0 * D);
+    for (let i = 0; i < LAND.length; i += 3) {
+      const x1 = LAND[i] * cL - LAND[i + 2] * sL, z1 = LAND[i] * sL + LAND[i + 2] * cL;
+      const z2 = LAND[i + 1] * sP + z1 * cP;
+      if (z2 <= 0.02) continue;
+      const y2 = LAND[i + 1] * cP - z1 * sP;
+      const px = cx + x1 * R, py = cy - y2 * R;
+      if (px < -4 || py < -4 || px > W + 4 || py > W + 4) continue;
+      buckets[Math.min(3, Math.floor(z2 * 4))].push(px, py);
+    }
+    const dot = Math.max(1.1, Math.min(2.6, (R / 160) * 1.25));
+    buckets.forEach((b, k) => {
+      ctx.fillStyle = `rgba(${COL.stitch},${0.25 + k * 0.2})`;
+      const r = dot * (0.65 + k * 0.12);
+      ctx.beginPath();
+      for (let i = 0; i < b.length; i += 2) { ctx.moveTo(b[i] + r, b[i + 1]); ctx.arc(b[i], b[i + 1], r, 0, 6.3); }
+      ctx.fill();
+    });
+    ctx.restore();
+    // Seam around the edge
+    ctx.strokeStyle = `rgba(${COL.stitch},.55)`; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(cx, cy, R - 5, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    const rim = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * 1.08);
+    rim.addColorStop(0, "rgba(247,227,176,0)"); rim.addColorStop(0.5, "rgba(247,227,176,.12)"); rim.addColorStop(1, "rgba(247,227,176,0)");
+    ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, 0, 7); ctx.fill();
+    // Threads joining memories in the order they were made: connection
+    const ms = [...S.data.memories].sort((a, b) => a.at - b.at);
+    ctx.lineWidth = 1.6; ctx.strokeStyle = `rgba(${COL.pin},.75)`;
+    for (let i = 1; i < ms.length; i++) {
+      const a = vec(ms[i - 1].place.lat, ms[i - 1].place.lng), b = vec(ms[i].place.lat, ms[i].place.lng);
+      const ang = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+      if (ang < 0.002) continue;
+      ctx.beginPath(); let on = false;
+      for (let t = 0; t <= 1.0001; t += 1 / 40) {
+        const s1 = Math.sin((1 - t) * ang) / Math.sin(ang), s2 = Math.sin(t * ang) / Math.sin(ang);
+        const p = project([a[0] * s1 + b[0] * s2, a[1] * s1 + b[1] * s2, a[2] * s1 + b[2] * s2], 1 + Math.sin(Math.PI * t) * Math.min(0.35, ang * 0.5));
+        if (p.z > -0.05) { on ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); on = true; } else on = false;
+      }
+      ctx.stroke();
+    }
+    // Lights where memories wait, merged when they overlap on screen
+    hits = [];
+    const t = performance.now() / 1000;
+    for (const g of placeGroups()) {
+      const p = project(vec(g.lat, g.lng));
+      if (p.z <= 0) continue;
+      const hit = hits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) < 18);
+      if (hit) { hit.ids.push(...g.ids); hit.groups.push(g); continue; }
+      hits.push({ x: p.x, y: p.y, z: p.z, ids: [...g.ids], groups: [g] });
+    }
+    for (const h of hits) {
+      const pulse = reduceMotion() ? 1 : 1 + 0.18 * Math.sin(t * 2.2 + h.x * 0.05);
+      const glow = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, 18 * pulse);
+      glow.addColorStop(0, `rgba(${COL.pin},.75)`); glow.addColorStop(1, `rgba(${COL.pin},0)`);
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(h.x, h.y, 18 * pulse, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgb(${COL.pin})`; ctx.beginPath(); ctx.arc(h.x, h.y, 5, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#3D1C1A"; ctx.lineWidth = 1.5; ctx.stroke();
+      if (h.ids.length > 1) {
+        ctx.fillStyle = "#3D1C1A"; ctx.beginPath(); ctx.arc(h.x + 10, h.y - 10, 8, 0, 7); ctx.fill();
+        ctx.fillStyle = `rgb(${COL.pin})`; ctx.font = "600 10px DM Sans, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(String(h.ids.length), h.x + 10, h.y - 9.5);
+      }
+    }
+    // You
+    const me = here();
+    if (me) {
+      const p = project(vec(me.lat, me.lng));
+      if (p.z > 0) { ctx.strokeStyle = `rgb(${COL.you})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, 7); ctx.stroke(); }
+    }
+  }
+  function tick() {
+    if (!cv) return;
+    const now = performance.now();
+    if (fly) {
+      const k = Math.min(1, (now - fly.t0) / fly.dur), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      let dL = ((fly.lng - fly.fromLng + 540) % 360) - 180;
+      lng0 = fly.fromLng + dL * e; lat0 = fly.fromLat + (fly.lat - fly.fromLat) * e; zoom = fly.fromZoom + (fly.zoom - fly.fromZoom) * e;
+      if (k >= 1) fly = null;
+    } else if (!ptrs.size) {
+      lng0 += vLng; lat0 = Math.max(-80, Math.min(80, lat0 + vLat)); vLng *= 0.94; vLat *= 0.94;
+      if (!reduceMotion() && now - lastInput > 4000 && zoom < 1.6) lng0 += 0.06; // slow drift when idle
+    }
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+  function flyTo(lat, lng, z) {
+    if (reduceMotion()) { lat0 = lat; lng0 = lng; zoom = z; return; }
+    fly = { lat: Math.max(-80, Math.min(80, lat)), lng, zoom: z, fromLat: lat0, fromLng: lng0, fromZoom: zoom, t0: performance.now(), dur: 1100 };
+  }
+  function showLocal(g) {
+    const panel = $("#localPanel"); if (!panel) return;
+    panel.innerHTML = localPanel(g);
+    if (!reduceMotion()) panel.firstElementChild?.animate([{ opacity: 0, transform: "translateY(24px)" }, { opacity: 1, transform: "none" }], { duration: 480, easing: EASE });
+  }
+  function onDown(e) {
+    cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; fly = null; vLng = vLat = 0; lastInput = performance.now();
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom }; }
+  }
+  function onMove(e) {
+    const prev = ptrs.get(e.pointerId); if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY }; ptrs.set(e.pointerId, cur); lastInput = performance.now();
+    if (ptrs.size === 2 && pinch) { const [a, b] = [...ptrs.values()]; zoom = Math.max(1, Math.min(6, pinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d)); moved += 10; return; }
+    const R = W * 0.42 * zoom, dx = cur.x - prev.x, dy = cur.y - prev.y; moved += Math.abs(dx) + Math.abs(dy);
+    vLng = -dx / R / D * 0.9; vLat = dy / R / D * 0.9;
+    lng0 += vLng; lat0 = Math.max(-80, Math.min(80, lat0 + vLat));
+  }
+  function onUp(e) {
+    ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+    if (moved > 8 || ptrs.size) return;
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const h = hits.map((h) => ({ h, d: Math.hypot(h.x - x, h.y - y) })).sort((a, b) => a.d - b.d)[0];
+    if (h && h.d < 30) { const g = h.h.groups[0]; vLng = vLat = 0; S.view.focus = g; flyTo(g.lat, g.lng, Math.max(zoom, 2.4)); showLocal(g); }
+  }
+  function onWheel(e) { e.preventDefault(); lastInput = performance.now(); zoom = Math.max(1, Math.min(6, zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); }
+  return {
+    mount(canvas) {
+      if (cv === canvas) return;
+      this.unmount();
+      cv = canvas; ctx = cv.getContext("2d"); size();
+      cv.addEventListener("pointerdown", onDown); cv.addEventListener("pointermove", onMove);
+      cv.addEventListener("pointerup", onUp); cv.addEventListener("pointercancel", onUp);
+      cv.addEventListener("wheel", onWheel, { passive: false });
+      window.addEventListener("resize", size);
+      // Start on the newest memory (or you), then lean in.
+      const last = [...S.data.memories].sort((a, b) => b.at - a.at)[0]?.place || here();
+      if (last) { lng0 = last.lng + 50; lat0 = Math.max(-60, Math.min(60, last.lat - 10)); zoom = 1; flyTo(last.lat, last.lng, 1.6); }
+      lastInput = performance.now();
+      raf = requestAnimationFrame(tick);
+    },
+    unmount() { if (!cv) return; cancelAnimationFrame(raf); window.removeEventListener("resize", size); cv = null; ctx = null; ptrs.clear(); fly = null; },
+    refresh() { if (S.view.name !== "map") return; const panel = $("#localPanel"); if (panel?.firstElementChild && S.view.focus) panel.innerHTML = localPanel(S.view.focus); },
+    zoomBy(f) { lastInput = performance.now(); flyTo(lat0, lng0, Math.max(1, Math.min(6, zoom * f))); },
+    focusGroup(i) {
+      const g = placeGroups()[i]; if (!g) return;
+      S.view.focus = g; flyTo(g.lat, g.lng, Math.max(zoom, 2.4)); showLocal(g);
+      $(".globe-wrap")?.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+    },
+  };
+})();
+
+/* ---------- render ---------- */
+function render() {
+  const app = $("#app");
+  const v = S.view.name;
+  app.innerHTML = v === "welcome" ? viewWelcome() : v === "claim" ? viewClaim() : !S.data ? "" : v === "map" ? viewMap() : v === "save" ? viewSave() : v === "memory" ? viewMemory() : v === "pass" ? viewPass() : v === "privacy" ? viewPrivacy() : viewHome();
+  wireHolds();
+  if (v === "map") Globe.mount($("#globe")); else Globe.unmount();
+  S.justSealed = null; S.justPassed = false; S.growLate = false;
+  if (S.view.reveal) S.view.reveal = false;
+}
+const DEPTH = { welcome: 0, home: 0, claim: 0, map: 1, save: 1, memory: 2, pass: 1, privacy: 1 };
+function go(name, extra = {}) {
+  if (S.waitTap) cancelTap();
+  if (rec.mr) { rec.mr.onstop = null; rec.mr.stream?.getTracks().forEach((t) => t.stop()); try { rec.mr.stop(); } catch {} rec.mr = null; clearInterval(rec.timer); }
+  const from = S.view.name;
+  // Leaving a memory closes it again.
+  if (from === "memory") { const m = S.data?.memories.find((x) => x.id === S.view.id); if (m) closeMemory(m); }
+  S.view = { name, ...extra };
+  render(); window.scrollTo({ top: 0, behavior: "auto" });
+  if (!Bag.isOpen || from === name) return;
+  // Deeper views come up out of a pocket; going back drops them in again.
+  const deeper = (DEPTH[name] ?? 1) > (DEPTH[from] ?? 0);
+  const frames = reduceMotion() ? [{ opacity: 0 }, { opacity: 1 }]
+    : deeper ? [{ opacity: 0, transform: "translateY(48px) scale(.97)" }, { opacity: 1, transform: "none" }]
+             : [{ opacity: 0, transform: "translateY(-22px) scale(1.01)" }, { opacity: 1, transform: "none" }];
+  $("#app").animate(frames, { duration: deeper ? 520 : 420, easing: EASE });
+}
+
+function renderSim() {
+  const sim = $("#sim");
+  const buzzing = Date.now() - S.sim.lastBuzz < 900;
+  $("#simLed").classList.toggle("on", !!S.waitTap);
+  sim.innerHTML = `
+    <div class="topbar"><h3>Virtual bag</h3><button class="link sim-close" data-action="sim-close">Close</button></div>
+    <p class="muted small">Stands in for the NFC patch, the haptic module and GPS while the hardware is on the bench.</p>
+    <div class="bagface">
+      <button class="deboss small ${S.waitTap ? "waiting" : ""} ${buzzing ? "buzz" : ""}" data-bag data-action="tap" aria-label="Simulate a tag tap">${buzzing ? "buzz" : "Tap"}</button>
+      <span class="small muted">${buzzing ? "The bag is buzzing." : "Simulate a tag tap: does what tapping your phone to the real tag does."}</span>
+    </div>
+    <hr class="stitch">
+    <div><label for="simPlace">Where you are</label><select id="simPlace"><option value="real" ${S.sim.place === "real" ? "selected" : ""}>My real location</option><optgroup label="Pretend I'm at">${PLACES.map((p) => `<option value="${p.id}" ${p.id === S.sim.place ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup></select></div>
+    ${S.sim.place === "real" ? `<p class="small muted" id="locStatus">${locStatusText()}</p>${Loc.status === "off" || Loc.status === "denied" ? `<button class="btn" data-action="allow-location">Use my location</button>` : ""}` : ""}
+    <div ${S.sim.place === "real" ? "hidden" : ""}><label for="simOffset">Distance from that spot</label><select id="simOffset">${OFFSETS.map(([m, l]) => `<option value="${m}" ${m === S.sim.offset ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div><label for="simRadius">Place radius for new memories: <b>${S.sim.radius} m</b></label><input id="simRadius" type="range" min="25" max="500" step="25" value="${S.sim.radius}"></div>
+    <hr class="stitch">
+    <label class="toggle">Phone near the bag <input id="simNear" type="checkbox" ${S.sim.near ? "checked" : ""}></label>
+    <label class="toggle">Haptic module powered <input id="simPowered" type="checkbox" ${S.sim.powered ? "checked" : ""}></label>
+    <hr class="stitch">
+    <button class="btn" data-action="reset-example">Reload the example bag</button>`;
+}
+
+/* ---------- press-and-hold ---------- */
+function wireHolds() {
+  for (const [id, fn] of [["holdSeal", () => doSeal()], ["holdPass", () => doPass()]]) {
+    const el = document.getElementById(id); if (!el) continue;
+    const fill = el.querySelector(".fill"); let raf = 0, t0 = 0;
+    const DUR = 1500;
+    const stop = () => { cancelAnimationFrame(raf); fill.style.transition = "transform .3s"; fill.style.transform = "scaleX(0)"; };
+    const tick = () => { const p = Math.min(1, (performance.now() - t0) / DUR); fill.style.transform = `scaleX(${p})`; if (p >= 1) { phoneHaptic(30); fn(); } else raf = requestAnimationFrame(tick); };
+    el.addEventListener("pointerdown", (e) => { e.preventDefault(); fill.style.transition = "none"; t0 = performance.now(); raf = requestAnimationFrame(tick); });
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"]) el.addEventListener(ev, stop);
+    el.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); fill.style.transition = "none"; t0 = performance.now(); raf = requestAnimationFrame(tick); } });
+    el.addEventListener("keyup", stop);
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+}
+
+/* ---------- flows ---------- */
+async function doSeal() {
+  const d = S.view.draft;
+  const p0 = d.spot || here();
+  if (!p0) { toast("Keepsake is still finding where you are."); render(); return; }
+  const { mediaUrl, ...keep } = d;
+  if (!(await waitForTap("Tap your phone to the bag's tag to seal it", { type: "seal", draft: keep }))) { render(); return; }
+  const p = p0;
+  const meta = { kind: d.kind, text: d.text.trim(), author: d.author.trim() || currentOwner().name, at: Date.now(), mime: d.mime };
+  const box = await seal(S.data.bag.key, meta, d.media);
+  const m = { id: uid(), gen: currentOwner().gen, author: meta.author, kind: d.kind, at: meta.at, place: { name: d.placeName.trim() || p.name || `Near ${fmtCoords(p)}`, lat: p.lat, lng: p.lng, acc: p.acc || 0 }, radius: S.sim.radius, armed: false, box, responses: [] };
+  S.data.memories.push(m); persist();
+  if (d.mediaUrl) URL.revokeObjectURL(d.mediaUrl);
+  // The memory slips down into the bag, the flap closes, the clasp snaps.
+  if (!reduceMotion()) await finished($("#app").animate([{ transform: "none", opacity: 1 }, { transform: "translateY(90px) scale(.86)", opacity: 0 }], { duration: 480, easing: "cubic-bezier(.5,0,.75,.3)", fill: "forwards" }), { duration: 480 });
+  await Bag.close(`Sealed at ${m.place.name}`);
+  await Bag.snap();
+  await sleep(reduceMotion() ? 600 : 900);
+  S.justSealed = m.id; S.growLate = true;
+  S.view = { name: "home" }; render(); $("#app").getAnimations().forEach((a) => a.cancel());
+  bagFace(); window.scrollTo({ top: 0 });
+  await Bag.open();
+  toast(`Sealed at ${m.place.name}. It will wait for you there.`);
+}
+async function doPass(named) {
+  const name = (named || $("#nextOwner")?.value || "").trim();
+  if (!name) { toast("Add their name first."); render(); return; }
+  S.view.next = name;
+  if (!(await waitForTap(`${name}, tap your phone to the bag's tag`, { type: "pass", next: name }))) { render(); return; }
+  const from = currentOwner().name;
+  await Bag.close(`${from} hands the bag to ${name}`);
+  await Bag.snap();
+  await sleep(500);
+  await Bag.handOver();
+  S.data.owners.push({ gen: currentOwner().gen + 1, name, since: Date.now() });
+  persist();
+  S.justPassed = true;
+  S.view = { name: "pass", done: true }; render();
+  Bag.setFace(S.data.bag.name, `Now carried by ${name}`, `${name}, press the clasp to open`);
+  await Bag.waitForClasp();
+  await Bag.open();
+}
+async function openMemory(m, viaHome) {
+  if (!(await waitForTap("Tap your phone to the bag's tag to open it", { type: "open", id: m.id, viaHome }))) { render(); return; }
+  const c = placeCheck(m);
+  if (!c.known) { if (viaHome) { toast("Keepsake doesn't know where you are yet. Check that location is on."); render(); return; } S.view.notHere = "unknown"; render(); return; }
+  if (!c.inside || m.armed === false) {
+    if (viaHome) { toast(m.armed === false && c.inside ? "The memory sealed here opens once you've left and come back." : `No memory waits here. Nearest: ${m.place.name}, ${fmtDist(c.dist)} away.`); render(); return; }
+    S.view.notHere = c.inside ? "unarmed" : "far"; render(); return;
+  }
+  await decryptInto(m);
+  hideArrival();
+  await boop();
+  S.view = { name: "memory", id: m.id, reveal: true, from: S.view.name === "map" ? "map" : "home" }; render();
+}
+async function decryptInto(m) {
+  for (const item of [m, ...m.responses]) {
+    const { meta, media } = await unseal(S.data.bag.key, item.box);
+    const mediaUrl = media ? URL.createObjectURL(new Blob([media], { type: meta.mime || "application/octet-stream" })) : "";
+    S.opened.set(item.id, { meta, mediaUrl, media });
+  }
+}
+async function onFile(input) {
+  const f = input.files?.[0]; if (!f) return;
+  const d = S.view.draft;
+  try {
+    if (d.kind === "photo") {
+      const blob = await toJpeg(f, 1600);
+      d.media = await blob.arrayBuffer(); d.mime = "image/jpeg";
+      if (d.mediaUrl) URL.revokeObjectURL(d.mediaUrl); d.mediaUrl = URL.createObjectURL(blob);
+    } else {
+      d.media = await f.arrayBuffer(); d.mime = f.type || "audio/mp4";
+      if (d.mediaUrl) URL.revokeObjectURL(d.mediaUrl); d.mediaUrl = URL.createObjectURL(f);
+    }
+  } catch (e) { toast("That file couldn't be read. Try another one."); }
+  render();
+}
+async function toJpeg(fileOrBlob, maxSide) {
+  const img = await createImageBitmap(fileOrBlob);
+  const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("encode"))), "image/jpeg", 0.86));
+}
+
+/* ---------- export: JPG / WAV / TXT in a plain .zip ---------- */
+async function toWav(buf) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ac = new AC(); const audio = await ac.decodeAudioData(buf.slice(0)); ac.close?.();
+  const ch = audio.numberOfChannels, len = audio.length, rate = audio.sampleRate;
+  const out = new DataView(new ArrayBuffer(44 + len * ch * 2));
+  const w = (o, s) => [...s].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); out.setUint32(4, 36 + len * ch * 2, true); w(8, "WAVE"); w(12, "fmt "); out.setUint32(16, 16, true);
+  out.setUint16(20, 1, true); out.setUint16(22, ch, true); out.setUint32(24, rate, true); out.setUint32(28, rate * ch * 2, true);
+  out.setUint16(32, ch * 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, len * ch * 2, true);
+  const chans = Array.from({ length: ch }, (_, i) => audio.getChannelData(i));
+  for (let i = 0, o = 44; i < len; i++) for (let c = 0; c < ch; c++, o += 2) { const s = Math.max(-1, Math.min(1, chans[c][i])); out.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
+  return new Uint8Array(out.buffer);
+}
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function zip(files) { // [{name, data:Uint8Array}] stored (no compression), so any unzip tool reads it
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const d = new Date(), time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), n = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true); lh.setUint32(18, n, true); lh.setUint32(22, n, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true); ch.setUint32(20, n, true); ch.setUint32(24, n, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + n;
+  }
+  const cdSize = central.reduce((s, p) => s + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+}
+async function doExport() {
+  const btn = $("#exportBtn"), note = $("#exportNote");
+  const downloads = window.claude?.use ? await window.claude.use("downloads").catch(() => null) : null;
+  // Outside claude.ai (the home-screen app): the phone's share sheet, or a plain download.
+  const saveFile = downloads ? (name, blob) => downloads.save({ filename: name, data: blob }) : Native ? async (name, blob) => {
+    const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
+    await Native.call("share.file", { name, base64, mime: "application/zip" });
+  } : async (name, blob) => {
+    const file = new File([blob], name, { type: "application/zip" });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  };
+  btn.disabled = true; btn.textContent = "Preparing…";
+  try {
+    const enc = new TextEncoder(), files = [];
+    const safe = (s) => s.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "memory";
+    const stamp = (t) => new Date(t).toISOString().slice(0, 10);
+    const all = S.data.memories.flatMap((m) => [{ m, item: m, base: `${stamp(m.at)}_${safe(m.place.name)}_${safe(m.author)}` },
+      ...m.responses.map((r) => ({ m, item: r, base: `${stamp(m.at)}_${safe(m.place.name)}_${safe(m.author)}_reply-${safe(r.author)}` }))]);
+    for (const { m, item, base } of all) {
+      const { meta, media } = await unseal(S.data.bag.key, item.box);
+      const about = `Place: ${m.place.name} (${m.place.lat.toFixed(5)}, ${m.place.lng.toFixed(5)}, opens within ${m.radius} m)\nBy: ${meta.author}\nDate: ${new Date(meta.at).toString()}\n\n${meta.text || ""}\n`;
+      files.push({ name: `${base}.txt`, data: enc.encode(about) });
+      if (media && meta.kind === "photo") files.push({ name: `${base}.jpg`, data: new Uint8Array(media) });
+      if (media && meta.kind === "voice") {
+        try { files.push({ name: `${base}.wav`, data: await toWav(media) }); }
+        catch { files.push({ name: `${base}.original-audio`, data: new Uint8Array(media) }); }
+      }
+    }
+    files.push({ name: "README.txt", data: enc.encode(`${S.data.bag.name}\nExported ${new Date().toString()}\n\nCarried by: ${S.data.owners.map((o) => `${o.name} (generation ${o.gen})`).join(", ")}\n\nEach memory has a .txt with its place, author and words, plus a .jpg or .wav if it had one.\nThese are ordinary files. They open on any computer, with or without the app.\n`) });
+    await saveFile(`${safe(S.data.bag.name)}-memories.zip`, zip(files));
+    note.textContent = `Saved ${files.length} files.`;
+  } catch (e) {
+    note.textContent = e?.code === "declined" || e?.name === "AbortError" ? "Export cancelled." : "The export didn't finish. Try again.";
+  } finally { btn.disabled = false; btn.textContent = "Export everything"; }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button, [data-mem]"); if (!t) return;
+  const a = t.dataset;
+  if (a.ob) return obStep(a.ob);
+  if (a.place !== undefined && a.action === undefined) return Globe.focusGroup(+a.place);
+  if (a.go) { if (a.go === "save") return go("save", { step: "kind" }); return go(a.go); }
+  if (a.mem && !a.action) return go("memory", { id: a.mem, from: S.view.name === "map" ? "map" : "home" });
+  if (a.kind) { S.view.draft.kind = a.kind; S.view.step = "capture"; return render(); }
+  if (a.step) {
+    saveDraftFields();
+    if (a.step === "seal" && S.view.draft) { const p = here(); if (p) S.view.draft.spot = { lat: p.lat, lng: p.lng, acc: p.acc || 0, name: p.name, pretend: !!p.pretend }; }
+    S.view.step = a.step; return render();
+  }
+  if (a.pick) return document.getElementById(a.pick).click();
+  switch (a.action) {
+    case "tap": return tapBag();
+    case "allow-location": await Loc.start(); if (Loc.status === "denied") toast("Location is off for Keepsake. Turn it on in your phone's Settings."); return render();
+    case "ob-allow": { const st = await Loc.start(); if (st === "denied") toast("No problem. You can turn location on later in Settings."); return obStep("bag"); }
+    case "ob-example": return finishOnboarding(await makeExample(S.ob.name));
+    case "ob-tagbag": S.claimBag = { id: S.ob.tag.bagId, key: S.ob.tag.key }; S.data = null; S.view = { name: "claim", step: "name" }; render(); return;
+    case "copy-tag": {
+      const bag = S.claimBag || S.data.bag, link = tagUrl(bag).replace(/^https:\/\//, "");
+      try { await navigator.clipboard.writeText(link); toast("Copied. Paste it into NFC Tools."); }
+      catch { const r = document.createRange(); r.selectNodeContents($("#tagLink")); getSelection().removeAllRanges(); getSelection().addRange(r); toast("Selected. Copy it from here."); }
+      return;
+    }
+    case "tag-setup": S.view.tagSetup = !S.view.tagSetup; return render();
+    case "tag-open": go("privacy", { tagSetup: true }); return setTimeout(() => $("#tagLink")?.closest(".local")?.scrollIntoView({ block: "start", behavior: reduceMotion() ? "auto" : "smooth" }), 80);
+    case "ob-new": S.data = null; S.view = { name: "claim", step: "tap" }; render(); return;
+    case "zoom-in": return Globe.zoomBy(1.5);
+    case "zoom-out": return Globe.zoomBy(1 / 1.5);
+    case "save-name": {
+      const v = $("#myName").value.trim(); if (!v) return toast("Add your name first.");
+      const me = currentOwner(), old = me.name; me.name = v;
+      for (const m of S.data.memories) if (m.gen === me.gen && m.author === old) m.author = v;
+      persist(); render(); return toast(`Saved. Your chapter is signed ${v}${/[.!?]$/.test(v) ? "" : "."}`);
+    }
+    case "record": return toggleRecording();
+    case "close-bag": bagFace(); await Bag.close("Press the clasp to open"); return Bag.waitForClasp().then(() => Bag.open());
+    case "sim-close": $("#sim").setAttribute("data-closed", ""); return;
+    case "sim-open": $("#sim").removeAttribute("data-closed"); $("#sim").querySelector("button")?.focus(); return;
+    case "arrival-later": hideArrival(true); return;
+    case "claim-start":
+      S.claimBag ||= newBagKey();
+      if (!(await waitForTap("Tap the tag you just wrote", { type: "claim", bag: S.claimBag, ob: S.ob }))) return render();
+      S.view.step = "name"; return render();
+    case "claim-name": {
+      const name = $("#bagName").value.trim() || "My bag", who = ($("#ownerName")?.value || S.ob.name || "").trim() || "You";
+      const k = S.claimBag || newBagKey(); S.claimBag = null;
+      S.data = { bag: { id: k.id, key: k.key, name, claimedAt: Date.now() }, owners: [{ gen: 1, name: who, since: Date.now() }], memories: [], isExample: false, onboarded: true, tagSeenAt: Date.now() };
+      S.opened.clear(); persist(); await boop();
+      S.view.step = "intro"; return render();
+    }
+    case "capture-next": {
+      saveDraftFields();
+      const d = S.view.draft;
+      if (d.kind === "note" && !d.text.trim()) return toast("Write a few words first.");
+      if (d.kind !== "note" && !d.media) return toast(d.kind === "photo" ? "Choose a photo first." : "Choose a recording first.");
+      S.view.step = "place"; return render();
+    }
+    case "open": return openMemory(S.data.memories.find((m) => m.id === a.id), false);
+    case "open-here": return openHere();
+    case "respond": S.view.respond = true; S.view.rdraft = { text: "", author: "" }; render(); return $("#respAuthor")?.focus();
+    case "respond-cancel": S.view.respond = false; return render();
+    case "respond-seal": {
+      const author = $("#respAuthor").value.trim(), text = $("#respText").value.trim();
+      if (!author || !text) { S.view.rdraft = { author, text }; render(); return toast("Add your name and a few words."); }
+      const m = S.data.memories.find((x) => x.id === a.id);
+      const r = { id: uid(), author, at: Date.now(), box: await seal(S.data.bag.key, { kind: "note", text, author, at: Date.now() }, null) };
+      m.responses.push(r); persist();
+      S.opened.set(r.id, { meta: { kind: "note", text, author, at: r.at }, mediaUrl: "" });
+      S.view.respond = false; render(); await boop(); return toast(`Sealed with ${m.author === "You" ? "your" : m.author + "'s"} memory.`);
+    }
+    case "copy-code": {
+      const code = $("#recCode").textContent;
+      try { await navigator.clipboard.writeText(code); toast("Recovery code copied."); }
+      catch { const r = document.createRange(); r.selectNodeContents($("#recCode")); getSelection().removeAllRanges(); getSelection().addRange(r); toast("Selected. Copy it from here."); }
+      return;
+    }
+    case "export": return doExport();
+    case "delete": S.view.confirmDelete = true; return render();
+    case "delete-no": S.view.confirmDelete = false; return render();
+    case "delete-yes": case "new-bag":
+      await wipeStorage(); S.opened.clear();
+      S.data = null; S.ob = { name: "" };
+      S.view = { name: "welcome", step: "hello" }; render(); toast(a.action === "new-bag" ? "Ready for a new bag." : "Everything on this phone was deleted.");
+      return;
+    case "reset-example":
+      await wipeStorage(); S.opened.clear(); S.data = await makeExample(S.data?.owners?.[1]?.name || S.ob.name || "You"); persist();
+      if (Bag.isOpen) await Bag.close("");
+      S.view = { name: "home" }; render(); bagFace(); toast("Example bag reloaded.");
+      if (matchMedia("(max-width: 899px)").matches) $("#sim").setAttribute("data-closed", "");
+      return Bag.waitForClasp().then(() => Bag.open());
+  }
+});
+document.addEventListener("keydown", (e) => {
+  const g = e.target.closest?.("g.mark, g.pin"); if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go("memory", { id: g.dataset.mem, from: S.view.name === "map" ? "map" : "home" }); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.id === "fileVoice" || t.id === "filePhoto") return onFile(t);
+  if (t.id === "simPlace") { S.sim.place = t.value; saveSim(); if (t.value === "real") Loc.start(); renderSim(); return refreshAfterSim(); }
+  if (t.id === "simOffset") { S.sim.offset = +t.value; saveSim(); return refreshAfterSim(); }
+  if (t.id === "simNear") { S.sim.near = t.checked; return; }
+  if (t.id === "simPowered") { S.sim.powered = t.checked; return; }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id === "simRadius") { S.sim.radius = +e.target.value; saveSim(); e.target.previousElementSibling.querySelector("b").textContent = `${S.sim.radius} m`; }
+});
+function refreshAfterSim() {
+  onLocationChange(true);
+  renderSim();
+  if (S.waitTap) return;
+  if (S.view.name === "memory" || S.view.name === "home") { S.view.notHere = false; render(); }
+  else if (S.view.name === "map") Globe.refresh();
+  else if (S.view.name === "save" && S.view.step === "place") { S.view.draft.placeTyped = false; S.view.draft.placeName = ""; render(); }
+}
+function saveDraftFields() {
+  const d = S.view.draft; if (!d) return;
+  const v = (id) => document.getElementById(id)?.value;
+  if (v("noteText") !== undefined) d.text = v("noteText");
+  if (v("caption") !== undefined) d.text = v("caption");
+  if (v("author") !== undefined) d.author = v("author");
+  if (v("placeName") !== undefined && v("placeName") !== d.placeName) { d.placeName = v("placeName"); d.placeTyped = true; }
+}
+$("#clasp").addEventListener("click", (e) => { e.stopPropagation(); Bag.pressClasp(); });
+$("#simOpen").addEventListener("click", () => { $("#sim").removeAttribute("data-closed"); $("#sim").querySelector("button")?.focus(); });
+setInterval(() => { if (Date.now() - S.sim.lastBuzz < 1500) renderSim(); }, 500);
+window.addEventListener("pagehide", () => S.opened.clear()); // memories close again when you leave
+window.addEventListener("hashchange", () => { const t = readTag(location.hash); if (t) onTagTap(t); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && S.view.name === "memory") { const m = S.data?.memories.find((x) => x.id === S.view.id); if (m) { closeMemory(m); render(); } } });
+
+/* ---------- boot ---------- */
+/* ---------- one Keepsake tab at a time ---------- */
+// iPhone opens every tag tap in a new Safari tab, and a web page can't change that (the iPhone app
+// will read tags in place). So the newest tab wins and older ones step aside, rather than
+// several tabs holding different states of the same bag.
+const tabs = "BroadcastChannel" in window ? new BroadcastChannel("keepsake-tabs") : null;
+const TAB_ID = uid();
+tabs?.addEventListener("message", (e) => { if (e.data?.type === "newest" && e.data.id !== TAB_ID) retireTab(); });
+function retireTab() {
+  tabs?.close();
+  try { if (Loc.watchId != null) navigator.geolocation.clearWatch(Loc.watchId); } catch {}
+  S.opened.clear();
+  document.body.innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:32px 24px;text-align:center;background:#3D1C1A;color:#E6C48A;font-family:'DM Sans',sans-serif">
+    <div><p style="font-family:'Instrument Serif',Georgia,serif;font-size:34px;line-height:1.1;margin:0 0 12px;color:#F2E4CC">Keepsake moved to your newest tab.</p>
+    <p style="margin:0;opacity:.85">Tapping the bag opens Keepsake in a new tab. You can close this one.</p></div></div>`;
+  try { window.close(); } catch {}
+}
+
+(async () => {
+  if (!Native) tabs?.postMessage({ type: "newest", id: TAB_ID });
+  renderSim();
+  const saved = await loadState();
+  const tag = readTag(location.hash);
+  if (!saved?.onboarded || !saved.bag?.id) {
+    // First launch: get to know the person before handing them a bag.
+    Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
+    S.view = { name: "welcome", step: "hello" }; render();
+    if (tag) await onTagTap(tag);
+    return;
+  }
+  S.data = saved;
+  if (tag) { if (Loc.wasAllowed()) Loc.start(); return onTagTap(tag); }
+  if (S.data.isExample && ["The cognac satchel", "Heartwood"].includes(S.data.bag.name)) { S.data.bag.name = "Keepsake"; persist(); }
+  S.view = { name: "home" };
+  render(); bagFace();
+  $("#clasp").focus({ preventScroll: true });
+  if (Loc.wasAllowed()) Loc.start();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
