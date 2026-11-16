@@ -645,7 +645,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-09.ble3"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-16.sync1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -891,20 +891,24 @@ const Timing = {
 /** The moment's buzz (see CONFIG.buzz). `tap` is the tag tap that led here, for timing. */
 function boop(event = "open", tap = null) { return sendBuzz(CONFIG.buzz[event] || "tap", tap); }
 async function sendBuzz(cmd, tap = null) {
-  phoneHaptic();
   if (realBagPaired()) {
-    // Don't hold the screen for the radio: the memory shows while the command travels.
-    RealBag.buzz(cmd).then((r) => {
+    // In sync: the screen (and the phone's own vibration, where the browser allows it) moves when the
+    // bag says it got the command, which is when its motor starts. A cold link can take longer, so
+    // never hold the screen more than 1.2 s; the bag then buzzes a moment after.
+    const sent = RealBag.buzz(cmd).then((r) => {
       if (tap && tap.at != null) Timing.add("tap→buzz", performance.now() - tap.at, `${tap.via}, “${cmd}”${r.ok ? "" : ", failed"}`);
       Timing.add("bag write", r.ms, `“${cmd}”${r.ok ? "" : `: ${r.error}`}`);
       if (!r.ok) toast(`The bag didn't buzz: ${r.error}`);
+      return r;
     });
+    const r = await Promise.race([sent, sleep(1200).then(() => null)]);
+    if (r === null) Timing.add("in sync?", 1200, "the bag took over 1.2 s, so the screen moved first");
   } else {
     const r = await SimBag.buzz(cmd);
     if (!r.ok) { toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
     if (tap && tap.at != null) Timing.add("tap→buzz", performance.now() - tap.at, `${tap.via}, virtual bag`);
   }
-  if (realBagPaired()) await sleep(250);
+  phoneHaptic();
   S.sim.lastBuzz = Date.now(); renderSim();
   for (const el of document.querySelectorAll("[data-bag]")) { el.classList.remove("buzz"); void el.offsetWidth; el.classList.add("buzz"); }
 }
@@ -1127,6 +1131,7 @@ function viewHome() {
       <p class="small">Write this bag's link onto the NFC tag inside it, once. Then tapping the bag with your iPhone opens Keepsake, and opens the memory that waits where you're standing.</p>
       <button class="btn" data-action="tag-open">Set up the tag</button>
     </section>`;
+  if (realBagPaired() && RealBag.state !== "connected") html += bleStatusBlock();
   if (!realBagPaired()) html += `<section class="pocket stack" aria-label="Your bag's buzzer">
       <div class="chapter-head"><h3>Connect your bag's buzzer</h3><span class="muted small">Bluetooth</span></div>
       ${RealBag.supported
@@ -2120,6 +2125,7 @@ function retireTab() {
   if (S.data.isExample && ["The cognac satchel", "Heartwood"].includes(S.data.bag.name)) { S.data.bag.name = "Keepsake"; persist(); }
   S.view = { name: "home" };
   render(); bagFace();
+  if (realBagPaired() && !RealBag.needsTap) RealBag.connect(); // warm link: arrival buzzes land with the banner
   $("#clasp").focus({ preventScroll: true });
   if (Loc.wasAllowed()) Loc.start();
 })();

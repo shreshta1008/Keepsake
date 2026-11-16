@@ -77,7 +77,17 @@
     const set = (state, err) => { self.state = state; if (err !== undefined) self.lastError = err; ev.emit(self); };
     if (self.supported) self.state = remembered() ? "paired" : "unpaired";
 
-    function onDisconnect() { ch = null; if (self.state !== "unpaired") set("paired"); }
+    // Keep the link warm: if the bag drops (out of range, rebooted), quietly try again, backing off.
+    // A warm link writes in well under a second, so the bag buzzes with the phone, not after it.
+    let retries = 0, retryTimer = 0;
+    function scheduleReconnect() {
+      clearTimeout(retryTimer);
+      if (!remembered() || !device || document.hidden || retries >= 5) return;
+      const wait = [1000, 2000, 4000, 8000, 15000][retries++];
+      retryTimer = setTimeout(async () => { if (!(await self.connect({ waitMs: 5000 }))) scheduleReconnect(); }, wait);
+    }
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && remembered()) { retries = 0; self.connect({ waitMs: 5000 }); } });
+    function onDisconnect() { ch = null; if (self.state === "unpaired") return; set("paired"); scheduleReconnect(); }
 
     async function attach(d) {
       if (device && device !== d) device.removeEventListener("gattserverdisconnected", onDisconnect);
@@ -92,6 +102,7 @@
       try { ch = await withTimeout(svc.getCharacteristic(CFG.commandUuid), 5000, "Finding the buzz command"); }
       catch (e) { try { device.gatt.disconnect(); } catch {} throw new Error(`The bag has the Keepsake service but not the buzz characteristic (${CFG.commandUuid.slice(0, 8)}…). Check the firmware.`); }
       self.lastConnectMs = Math.round(now() - t0);
+      retries = 0; clearTimeout(retryTimer);
       set("connected", "");
       return true;
     }
@@ -193,6 +204,7 @@
     };
 
     self.forget = async () => {
+      clearTimeout(retryTimer);
       try { device?.removeEventListener("gattserverdisconnected", onDisconnect); device?.gatt?.disconnect(); } catch {}
       try { await device?.forget?.(); } catch {}
       device = null; ch = null;

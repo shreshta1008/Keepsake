@@ -66,6 +66,8 @@ All in `keepsake.config.js`:
 
 The chooser matches the bag by service ID, by the exact name, **or** by any name starting with `Keepsake`/`keepsake`/`KEEPSAKE` (`namePrefixes`), because many ESP32 sketches advertise only the name. If the bag still isn't listed, **Show every nearby device** lists everything; the app then checks the device really has the Keepsake service and says so if it doesn't.
 
+**Keeping the phone and the bag in sync:** the app connects to the paired bag as soon as it opens, reconnects by itself if the link drops (backing off: 1, 2, 4, 8 and 15 s), and shows each buzz on screen only once the bag confirms it got the command. If the bag takes longer than 1.2 s (a cold link), the screen goes ahead and Timing logs an `in sync?` entry.
+
 The tag holds one NDEF URL record: `https://<host>/#v1.<bagId>.<key>`. The bag ID is 11 characters and the key 43 (base64url), about 90 bytes in all, which fits easily on an NTAG215 (504 bytes). Everything after `#` stays on the phone. NTAG424 DNA is not implemented yet: it would be a third `TagReader` that also checks the tag's signed code.
 
 ## Test it on your phone, step by step
