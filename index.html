@@ -645,7 +645,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-16.sync1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-17.alert1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -756,11 +756,12 @@ function showArrival(m) {
   const el = $("#arrival");
   el.innerHTML = `<div class="ring" data-bag aria-hidden="true">${icons.nfc}</div>
     <div><b>${buzzWords()}</b><span class="small">${poss(m.author)} memory waits here, at ${esc(m.place.name)}. Tap your phone to the bag's tag to open it.${bagLinkNote()}</span></div>
-    <div class="actions"><button class="link" data-action="arrival-later">Not now</button></div>`;
+    <div class="actions"><button class="link" data-action="arrival-later">Not now</button><button class="btn primary" data-action="arrival-open" data-id="${m.id}" style="min-height:44px;padding:8px 18px">Open it</button></div>`;
   el.hidden = false;
   if (!reduceMotion()) el.animate([{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], { duration: 500, easing: EASE });
 }
-function hideArrival() { const el = $("#arrival"); if (el) el.hidden = true; }
+/** The banner goes, and so does the bag's alert. */
+function hideArrival() { const el = $("#arrival"); if (el) el.hidden = true; stopBuzz(); }
 
 /** Open whatever memory waits where the phone is now. */
 async function openHere() {
@@ -833,7 +834,9 @@ function tapBag() {
 /** A test buzz from the Virtual bag panel or Settings: real bag when paired, virtual otherwise. */
 async function testBuzz(cmd) {
   if (!BagHaptics.validCommand(cmd)) return toast("Effects run from 1 to 123.");
+  if (cmd === "stop") { if (!S.ringing && !realBagPaired()) return toast("Nothing is buzzing."); S.ringing = S.ringing || true; return stopBuzz(); }
   if (!realBagPaired()) return sendBuzz(cmd);
+  setRinging(cmd === "alert");
   const r = await RealBag.buzz(cmd);
   Timing.add("bag write", r.ms, `test “${cmd}”${r.ok ? "" : `: ${r.error}`}`);
   toast(r.ok ? `Sent “${cmd}” in ${(r.ms / 1000).toFixed(2)} s. Did the bag buzz?` : `The bag didn't buzz: ${r.error}`);
@@ -890,7 +893,27 @@ const Timing = {
 
 /** The moment's buzz (see CONFIG.buzz). `tap` is the tag tap that led here, for timing. */
 function boop(event = "open", tap = null) { return sendBuzz(CONFIG.buzz[event] || "tap", tap); }
+/** The bag repeats "alert" until it's stopped; any other buzz replaces it (on the bag too). */
+function setRinging(on) {
+  clearInterval(S.ringTimer); clearTimeout(S.ringEnd); S.ringing = on;
+  if (!on) return;
+  // Mirror the bag's alert on screen, and end when the bag would end it by itself.
+  S.ringTimer = setInterval(showBuzz, 2460);
+  S.ringEnd = setTimeout(() => setRinging(false), 120000);
+}
+/** The arrival was dealt with (opened, "Not now", walked away): the bag goes quiet. */
+function stopBuzz() {
+  if (!S.ringing) return;
+  setRinging(false);
+  if (realBagPaired()) RealBag.buzz(CONFIG.buzz.stop).then((r) => { if (!r.ok) toast(`The bag didn't stop: ${r.error}`); });
+}
+function showBuzz() {
+  phoneHaptic();
+  S.sim.lastBuzz = Date.now(); renderSim();
+  for (const el of document.querySelectorAll("[data-bag]")) { el.classList.remove("buzz"); void el.offsetWidth; el.classList.add("buzz"); }
+}
 async function sendBuzz(cmd, tap = null) {
+  setRinging(cmd === "alert" || cmd.startsWith("alert:"));
   if (realBagPaired()) {
     // In sync: the screen (and the phone's own vibration, where the browser allows it) moves when the
     // bag says it got the command, which is when its motor starts. A cold link can take longer, so
@@ -905,12 +928,10 @@ async function sendBuzz(cmd, tap = null) {
     if (r === null) Timing.add("in sync?", 1200, "the bag took over 1.2 s, so the screen moved first");
   } else {
     const r = await SimBag.buzz(cmd);
-    if (!r.ok) { toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
+    if (!r.ok) { setRinging(false); toast("The bag didn't buzz: its haptic module is off (Virtual bag panel)."); return; }
     if (tap && tap.at != null) Timing.add("tap→buzz", performance.now() - tap.at, `${tap.via}, virtual bag`);
   }
-  phoneHaptic();
-  S.sim.lastBuzz = Date.now(); renderSim();
-  for (const el of document.querySelectorAll("[data-bag]")) { el.classList.remove("buzz"); void el.offsetWidth; el.classList.add("buzz"); }
+  showBuzz();
 }
 
 /* ---------- the closed bag: flap, clasp, going inside ---------- */
@@ -1671,6 +1692,7 @@ function render() {
 const DEPTH = { welcome: 0, home: 0, claim: 0, map: 1, save: 1, memory: 2, pass: 1, privacy: 1 };
 function go(name, extra = {}) {
   if (S.waitTap) cancelTap();
+  if (name === "memory") hideArrival(); // looking at the memory deals with the bag's alert
   if (rec.mr) { rec.mr.onstop = null; rec.mr.stream?.getTracks().forEach((t) => t.stop()); try { rec.mr.stop(); } catch {} rec.mr = null; clearInterval(rec.timer); }
   const from = S.view.name;
   // Leaving a memory closes it again.
@@ -1710,6 +1732,7 @@ function renderSim() {
     <h3 style="font-size:22px">Real bag (Bluetooth)</h3>
     ${bleStatusBlock().replace(' id="bleStatus"', "")}
     <div class="row">${["tap", "single", "strong"].map((c) => `<button class="btn" data-action="ble-test" data-cmd="${c}">${c}</button>`).join("")}</div>
+    <div class="row">${["alert", "stop"].map((c) => `<button class="btn" data-action="ble-test" data-cmd="${c}">${c}</button>`).join("")}</div>
     <div class="row"><input id="simFx" type="number" min="1" max="123" step="1" inputmode="numeric" value="${S.sim.fx || 47}" aria-label="DRV2605L effect number, 1 to 123" style="min-height:48px;font:inherit;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 10px;width:100%"><button class="btn" data-action="ble-fx">Send fx</button></div>
     <p class="small muted" style="margin:0">${realBagPaired() ? `Test commands go to ${esc(RealBag.deviceName || CONFIG.bag.name)}.` : "No real bag paired: test commands buzz the virtual bag."}</p>
     ${realBagPaired() ? `<button class="link" data-action="ble-forget" style="align-self:start">Forget this bag</button>` : ""}
@@ -1994,7 +2017,8 @@ document.addEventListener("click", async (e) => {
     case "close-bag": bagFace(); await Bag.close("Press the clasp to open"); return Bag.waitForClasp().then(() => Bag.open());
     case "sim-close": $("#sim").setAttribute("data-closed", ""); return;
     case "sim-open": $("#sim").removeAttribute("data-closed"); $("#sim").querySelector("button")?.focus(); return;
-    case "arrival-later": hideArrival(true); return;
+    case "arrival-later": hideArrival(); return;
+    case "arrival-open": hideArrival(); return go("memory", { id: a.id, from: "home" });
     case "claim-start":
       S.claimBag ||= newBagKey();
       if (!(await waitForTap("Tap the tag you just wrote", { type: "claim", bag: S.claimBag, ob: S.ob }))) return render();

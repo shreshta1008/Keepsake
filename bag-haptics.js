@@ -23,11 +23,14 @@
   const now = () => performance.now();
   const withTimeout = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what} timed out after ${ms / 1000} s`)), ms))]);
 
-  /** "tap", "single", "strong", or "fx:N" with N from 1 to 123 (DRV2605L library effects). */
+  /** The bag's commands: "tap", "single", "strong", "alert", "stop", "alert:<1-600 s>",
+      "fx:<1-123>" (DRV2605L library effects) and "power:<1-127>". */
   function validCommand(c) {
-    if (c === "tap" || c === "single" || c === "strong") return true;
-    const m = /^fx:(\d{1,3})$/.exec(c || "");
-    return !!m && +m[1] >= 1 && +m[1] <= 123;
+    if (["tap", "single", "strong", "alert", "stop"].includes(c)) return true;
+    const m = /^(fx|alert|power):(\d{1,3})$/.exec(c || "");
+    if (!m) return false;
+    const n = +m[2], max = { fx: 123, alert: 600, power: 127 }[m[1]];
+    return n >= 1 && n <= max;
   }
 
   function emitter() {

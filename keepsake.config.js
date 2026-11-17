@@ -14,11 +14,12 @@ window.KEEPSAKE_CONFIG = Object.freeze({
   // Which command the bag gets for each moment in the app.
   buzz: {
     open: "tap",       // a memory opened
-    arrival: "strong", // you reached a place where a memory waits
+    arrival: "alert",  // you reached a place where a memory waits: repeats until "stop" (needs the 2026-11-17 firmware)
     seal: "single",    // a memory was sealed (the clasp snaps)
     pass: "single",    // the bag was passed down
     reply: "single",   // a reply was sealed to a memory
     claim: "single",   // the buzzer was paired while claiming the bag
+    stop: "stop",      // the arrival was dealt with: open, "Not now", or walked away
   },
 
   // The address written onto the NFC tag. null means "wherever this app is served from".

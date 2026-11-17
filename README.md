@@ -124,6 +124,27 @@ Run each test 10 times and write down the median and the worst:
 | Tap to buzz, warm, 1 m | | | | |
 | Tap to buzz, cold, 1 m | | | | |
 
+## Firmware (the bag)
+
+`firmware/keepsake_bag/keepsake_bag.ino`: ESP32-S3 + DRV2605L (Qwiic, SDA 1 / SCL 2) + ERM motor.
+
+Flash it with the Arduino IDE: board **ESP32S3 Dev Module** (or your exact board), the **Adafruit DRV2605 Library** from the Library Manager, then Upload. Serial Monitor at 115200 shows every command.
+
+| Command | What the bag does | Sent by the app when |
+|---|---|---|
+| `alert` | two long pulses every ~2.5 s, until `stop` (or another command) or 2 minutes | you arrive where a memory waits |
+| `stop` | stops at once | you tap **Open it** or **Not now** on the banner, open a memory, or walk away |
+| `tap` | two pulses (replaces an alert) | a memory opens |
+| `single` | one pulse | sealed, passed down, replied, paired |
+| `strong` | two long pulses | (test button) |
+| `alert:<s>` | like `alert`, but at most `<s>` seconds (1 to 600) | (test) |
+| `fx:<n>` | DRV2605L library effect 1 to 123 | (test) |
+| `power:<n>` | pulse strength 1 to 127 until restart | (test, to tune) |
+
+Strength: pulses drive the motor at full strength for ~0.4 s (real-time mode) rather than short clicks. `DRIVE_MILLIVOLTS` (default 3000, the chip's usual level) sets "full"; raise it only up to your motor's rated voltage. How the motor is mounted matters as much: glued flat against the leather, on the side that touches the body, not floating in padding.
+
+The app needs this firmware for the arrival buzz: older firmware answers `alert` with "Unknown command" and stays still.
+
 ## Tested and untested (as of 2026-11-09)
 
 **Tested** in headless Chromium on a computer, with stand-in ("fake") Bluetooth and NFC objects. These tests check that the app calls the right things; they say nothing about real radios:
@@ -141,3 +162,4 @@ Run each test 10 times and write down the median and the worst:
 - The new service worker updating cleanly on phones that already have the old site installed.
 - All timings against the 2 s and 3 s specs.
 - NTAG424 DNA: not built yet.
+- The firmware has not been compiled for the ESP32 or run on your board. Its logic was compiled on Linux against stand-in libraries and simulated (patterns, alert repeat and time limit, stop, queueing, bad input). `DRIVE_MILLIVOLTS` relies on the DRV2605L's ~21.3 mV-per-step clamp scale: check that the felt strength changes as expected.
