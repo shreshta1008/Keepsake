@@ -128,6 +128,10 @@ Run each test 10 times and write down the median and the worst:
 
 When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. A memory opens only when all three hold: the phone is inside the circle, the bag has **left the circle and come back** since the memory was sealed, and the bag's tag is tapped. GPS tolerance scales with the circle (at most half its radius, never over 25 m), and "left" needs a margin past the edge (30% of the radius, between 5 and 15 m), so GPS wobble neither opens nor re-arms a memory. Circles under 20 m may only work outdoors.
 
+### The introduction in every new tab
+
+For demos, Keepsake plays its introduction whenever it opens in a **new tab** (then the bag closes and opens with the clasp), without touching the bag or its memories. Not on reloads in the same tab, and not when a tag tap opens it. Turn it off in Settings & privacy → **Show the introduction in every new tab**.
+
 ### Demoing with your real location
 
 - Virtual bag → **Where you are** must be **My real location** (a pretend place is remembered between visits; when one is on, the home screen says so with a **Use my real location** button).

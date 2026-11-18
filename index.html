@@ -666,7 +666,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.live2"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.intro1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -770,7 +770,7 @@ function nearestText() {
 // One buzz per arrival: remembered across the page reload a tag tap causes, forgotten once you leave.
 const announced = { get() { try { return localStorage.getItem("keepsake.arrived") || ""; } catch { return ""; } }, set(v) { try { v ? localStorage.setItem("keepsake.arrived", v) : localStorage.removeItem("keepsake.arrived"); } catch {} } };
 async function checkArrival() {
-  if (!S.data || !Bag.isOpen) return;
+  if (!S.data || !Bag.isOpen || S.view.name === "welcome") return;
   const last = announced.get();
   if (last) { const prev = S.data.memories.find((x) => x.id === last); if (!prev || placeCheck(prev).far) { announced.set(""); hideArrival(); } }
   const m = arrivalHere();
@@ -885,6 +885,14 @@ const realBagPaired = () => RealBag.supported && RealBag.state !== "unpaired" &&
 /** Re-render the Virtual bag panel, unless someone is typing in it. */
 function renderSimQuietly() { const a = document.activeElement; if (a && $("#sim")?.contains(a) && a.matches("input, select")) return; renderSim(); }
 RealBag.onChange(() => { renderSimQuietly(); const el = $("#bleStatus"); if (el) el.outerHTML = bleStatusBlock(); });
+
+/* ---------- the introduction in every new tab (for demos) ---------- */
+const IntroEachTab = {
+  get on() { try { return localStorage.getItem("keepsake.introEachTab") !== "off"; } catch { return true; } },
+  set on(v) { try { localStorage.setItem("keepsake.introEachTab", v ? "on" : "off"); } catch {} },
+  /** True once per tab: sessionStorage starts empty in a new tab and survives reloads in the same one. */
+  firstInThisTab() { try { if (sessionStorage.getItem("keepsake.introShown")) return false; sessionStorage.setItem("keepsake.introShown", "1"); return true; } catch { return false; } },
+};
 
 /** Only say the bag is buzzing when a real bag is paired; otherwise say what's true. */
 function buzzWords() { return realBagPaired() ? "Your bag is buzzing." : "A memory waits here."; }
@@ -1439,7 +1447,9 @@ function viewPrivacy() {
     h += `<div class="notice bad stack" role="alert"><b>Delete everything on this phone?</b><span>The sealed memories and the key will be erased here. The bag itself keeps its key, but these memories can't come back unless you exported them.</span>
       <div class="row"><button class="btn primary" data-action="delete-yes" style="background:var(--warn);border-color:var(--warn)">Delete everything</button><button class="btn" data-action="delete-no">Keep them</button></div></div>`;
   } else {
-    h += `<button class="btn" data-action="replay-intro">See the introduction again</button>
+    h += `<label class="toggle">Show the introduction in every new tab <input id="introEachTab" type="checkbox" ${IntroEachTab.on ? "checked" : ""}></label>
+      <p class="muted small" style="margin:0">For demos. Not when a tag tap opens Keepsake, and not on reloads.</p>
+      <button class="btn" data-action="replay-intro">See the introduction again</button>
       <p class="muted small" style="text-align:center;margin:0">Your bag and its memories stay as they are.</p>
       <hr class="stitch">`;
     h += `<div class="row"><button class="btn" data-action="new-bag">Start with a new bag</button><button class="btn" data-action="delete">Delete everything</button></div>`;
@@ -2185,7 +2195,9 @@ document.addEventListener("click", async (e) => {
       return;
     }
     case "replay-intro": S.ob = { name: currentOwner().name === "You" ? "" : currentOwner().name }; return go("welcome", { step: "hello" });
-    case "replay-done": return go("home");
+    case "replay-done":
+      S.view = { name: "home" }; render(); bagFace(); window.scrollTo({ top: 0 });
+      await Bag.close("Press the clasp to open"); await Bag.waitForClasp(); return Bag.open();
     case "nfc-listen": return startNfc(true);
     case "nfc-write": {
       const bag = S.claimBag || S.data?.bag; if (!bag) return;
@@ -2295,6 +2307,7 @@ document.addEventListener("change", (e) => {
   if (t.id === "simNear") { S.sim.near = t.checked; return; }
   if (t.id === "simPowered") { S.sim.powered = t.checked; return; }
   if (t.id === "simPractice") { S.sim.practice = t.checked; return renderSim(); }
+  if (t.id === "introEachTab") { IntroEachTab.on = t.checked; return toast(t.checked ? "The introduction will play in every new tab." : "New tabs open straight to your bag."); }
 });
 document.addEventListener("input", (e) => {
   if (e.target.id === "memRadius") setDraftRadius(e.target.value);
@@ -2349,13 +2362,23 @@ function retireTab() {
   startNfc(); // Chrome on Android, once NFC was allowed: read the tag in place from now on
   if (!saved?.onboarded || !saved.bag?.id) {
     // First launch: get to know the person before handing them a bag.
+    IntroEachTab.firstInThisTab(); // this tab has seen the introduction: a reload goes straight to the bag
     Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
     S.view = { name: "welcome", step: "hello" }; render();
     if (tag) { await onTagTap(tag); render(); }
     return;
   }
   S.data = saved;
-  if (tag) { if (Loc.wasAllowed()) Loc.start(); return onTagTap(tag); }
+  if (tag) { IntroEachTab.firstInThisTab(); if (Loc.wasAllowed()) Loc.start(); return onTagTap(tag); }
+  if (IntroEachTab.on && IntroEachTab.firstInThisTab()) {
+    // Demo: the introduction, then the bag closes and opens with the clasp. The bag and memories are untouched.
+    if (realBagPaired() && !RealBag.needsTap) RealBag.connect();
+    if (Loc.wasAllowed()) Loc.start();
+    S.ob = { name: currentOwner().name === "You" ? "" : currentOwner().name };
+    Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
+    S.view = { name: "welcome", step: "hello" }; render();
+    return;
+  }
   if (S.data.isExample && ["The cognac satchel", "Heartwood"].includes(S.data.bag.name)) { S.data.bag.name = "Keepsake"; persist(); }
   S.view = { name: "home" };
   render(); bagFace();
