@@ -648,7 +648,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.chrome2"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.seal1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1277,12 +1277,10 @@ function viewSave() {
       <p>To open it, the bag has to leave this circle and come back into it, then you tap the bag's tag. Until then it stays sealed, even for you.</p></div>
       <button class="btn primary" data-step="seal">Next: seal it</button>`;
   } else if (step === "seal") {
-    h += `<div class="stack"><span class="eyebrow">Seal</span><h2>${S.waitTap ? "Now hold your phone to the bag." : "Press and hold to seal this memory."}</h2>
-      <p class="muted">${S.waitTap ? "The key goes from the bag to this memory. After this, only the bag can open it, and only here." : `Sealed to the bag at ${esc(d.placeName)}.`}</p></div>`;
-    h += S.waitTap
-      ? tagPrompt(S.waitTap.label)
-      : `<button class="btn primary hold" id="holdSeal" aria-describedby="holdHint"><i class="fill"></i><span>Seal this memory</span></button>
-         <p id="holdHint" class="muted small" style="text-align:center">Keep pressing for about a second and a half.</p>`;
+    h += `<div class="stack"><span class="eyebrow">Seal</span><h2>Press and hold to seal this memory.</h2>
+      <p class="muted">It's sealed with the bag's key at ${esc(d.placeName || "this spot")}. To open it, leave and come back: the bag buzzes, and you tap its tag.</p></div>`;
+    h += `<button class="btn primary hold" id="holdSeal" aria-describedby="holdHint"><i class="fill"></i><span>Seal this memory</span></button>
+         <p id="holdHint" class="muted small" style="text-align:center">Keep pressing for about a second and a half. The bag gives one buzz when it's sealed.</p>`;
   }
   return h;
 }
@@ -1862,8 +1860,8 @@ async function doSeal() {
   const d = S.view.draft;
   const p0 = d.spot || here();
   if (!p0) { toast("Keepsake is still finding where you are."); render(); return; }
-  const { mediaUrl, ...keep } = d;
-  if (!(await waitForTap("Tap your phone to the bag's tag to seal it", { type: "seal", draft: keep }))) { render(); return; }
+  // No tag tap to seal: the phone already holds the bag's key. The tag is only for unlocking, back here later.
+  if (!S.data.bag.key) { toast("This browser doesn't have the bag's key yet. Save memories in Bluefy, or tap the bag's tag once here."); render(); return; }
   const p = p0;
   const meta = { kind: d.kind, text: d.text.trim(), author: d.author.trim() || currentOwner().name, at: Date.now(), mime: d.mime };
   const box = await seal(S.data.bag.key, meta, d.media);

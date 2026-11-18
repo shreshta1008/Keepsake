@@ -138,7 +138,7 @@ On iPhone a tag tap always opens the tag's link in the **default browser** (Chro
 
 Chrome and Bluefy keep separate storage and there is no server, so memories are copied once from Bluefy to Chrome: **Settings & privacy → Copy this bag for Chrome** in Bluefy, then **Paste from Bluefy** in Chrome (Chrome offers it on the first tag tap). The copy holds sealed memories and places only, never the key: Chrome learns the key from the tag, and checks it opens the memories. Copy again after saving new ones (Bluefy's home screen reminds you).
 
-**The real tag is required to open a memory**: the Virtual bag's Tap opens memories only in the example bag, or with **Practice mode** on (Virtual bag panel). It still stands in for the tag when claiming, sealing and passing down.
+**The real tag is required to open a memory**: the Virtual bag's Tap opens memories only in the example bag, or with **Practice mode** on (Virtual bag panel). It still stands in for the tag when claiming a bag and passing it down. **Sealing needs no tag tap**: press and hold, and the bag gives one buzz. The tag is only for unlocking, when the bag buzzes back at the place.
 
 **Known gap:** Chrome isn't open while you walk, so it can't see you leave and come back. Copied memories count as "left and came back" in Chrome; Bluefy enforces that rule (it's what triggers the buzz, and it checks again when Chrome's code is used).
 
