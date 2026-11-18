@@ -648,7 +648,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.radius1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.chrome2"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -672,8 +672,16 @@ async function startNfc(fromPress = false) {
 /** How to hold the phone, for this phone. */
 const holdHow = () => IS_ANDROID
   ? (Nfc.scanning ? "Hold the back of your phone flat against the tag inside the bag." : "Hold the back of your phone to the tag inside the bag, then open the link it shows.")
-  : "Hold the top edge of your iPhone to the tag inside the bag, then tap the banner that appears.";
+  : IS_IOS && RealBag.supported
+    ? "Hold the top edge of your iPhone to the tag inside the bag, then tap the banner: the memory opens in Chrome, with a code to open it here too."
+    : "Hold the top edge of your iPhone to the tag inside the bag, then tap the banner that appears.";
 const tagMatches = (tag, bag) => !!tag && !!bag && tag.bagId === bag.id && tag.key === bag.key;
+/** A bag copied in from another browser comes without its key: the tag supplies it. Check it really opens the memories. */
+async function keyFits(key) {
+  const m = S.data?.memories[0];
+  if (!m) return true;
+  try { await unseal(key, m.box); return true; } catch { return false; }
+}
 function newBagKey() { return { id: b64url(crypto.getRandomValues(new Uint8Array(8))), key: b64url(crypto.getRandomValues(new Uint8Array(32))) }; }
 
 async function savePending(p) {
@@ -780,9 +788,13 @@ async function onTagTap(tag) {
   history.replaceState(null, "", location.pathname + location.search); // the key shouldn't sit in the address bar
   Timing.markTap(tag.via || "tag link", tag.tapAt ?? performance.now());
   if (realBagPaired()) RealBag.connect(); // start the radio now: a memory may open in a moment
+  if (S.data && !S.data.bag.key && tag.bagId === S.data.bag.id) {
+    if (!(await keyFits(tag.key))) { toast("That tag's key doesn't open this bag's memories."); return; }
+    S.data.bag.key = tag.key; persist();
+  }
   // Already open and waiting for a tap (iPhone reused this tab): that's the tap.
   if (S.waitTap && (tagMatches(tag, S.data?.bag) || tagMatches(tag, S.claimBag))) {
-    const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve(true);
+    const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve({ real: true });
     if (S.data) { S.data.tagSeenAt = Date.now(); persist(); }
     return;
   }
@@ -798,7 +810,7 @@ async function onTagTap(tag) {
   }
   if (!tagMatches(tag, S.data.bag)) { toast("This tag belongs to a different bag."); return; }
   S.data.tagSeenAt = Date.now(); persist();
-  S.preTapped = { at: Date.now() };
+  S.preTapped = { at: Date.now(), real: true };
   bagFace(); if (!Bag.isOpen) await Bag.open({ quick: true });
   if (pend?.type === "seal") {
     const d = pend.draft;
@@ -821,17 +833,17 @@ async function onTagTap(tag) {
 
 /** Waits for the bag: a real tag tap (which may reload the page) or the virtual bag. */
 function waitForTap(label, pending) {
-  if (S.preTapped && Date.now() - S.preTapped.at < 120000) { S.preTapped = null; return Promise.resolve(true); }
+  if (S.preTapped && Date.now() - S.preTapped.at < 120000) { const p = S.preTapped; S.preTapped = null; return Promise.resolve({ real: !!p.real }); }
   if (pending) savePending(pending);
   return new Promise((resolve) => { S.waitTap = { label, resolve }; renderSim(); render(); });
 }
 function tapBag() {
   Timing.markTap("virtual");
   // No flow waiting: a simulated tap behaves like tapping the real tag here.
-  if (!S.waitTap) { if (S.data) { S.preTapped = { at: Date.now() }; closeSimOnPhone(); openHere(); } return; }
+  if (!S.waitTap) { if (S.data) { S.preTapped = { at: Date.now(), real: false }; closeSimOnPhone(); openHere(); } return; }
   const w = S.waitTap; S.waitTap = null;
   if (!S.sim.near) { toast("The phone isn't close enough to the bag (Virtual bag → Phone near the bag)."); S.waitTap = w; renderSim(); return; }
-  renderSim(); clearPending(); w.resolve(true);
+  renderSim(); clearPending(); w.resolve({ real: false });
   closeSimOnPhone();
 }
 /** A test buzz from the Virtual bag panel or Settings: real bag when paired, virtual otherwise. */
@@ -1156,6 +1168,11 @@ function viewHome() {
       <button class="btn" data-action="tag-open">Set up the tag</button>
     </section>`;
   if (realBagPaired() && RealBag.state !== "connected") html += bleStatusBlock();
+  const newest = Math.max(0, ...memories.map((m) => m.at));
+  if (IS_IOS && RealBag.supported && !S.data.isExample && memories.length && newest > (S.data.copiedAt || 0)) html += `<section class="pocket stack" aria-label="Copy to Chrome">
+      <div class="chapter-head"><h3>New memories aren't in Chrome yet</h3></div>
+      <p class="small">Tapping the tag opens Chrome. Copy this bag so Chrome can open them there.</p>
+      <button class="btn" data-action="copy-bag">Copy this bag for Chrome</button></section>`;
   if (!realBagPaired()) html += `<section class="pocket stack" aria-label="Your bag's buzzer">
       <div class="chapter-head"><h3>Connect your bag's buzzer</h3><span class="muted small">Bluetooth</span></div>
       ${RealBag.supported
@@ -1291,6 +1308,11 @@ function viewMemory() {
     if (S.waitTap) h += tagPrompt(S.waitTap.label);
     else if (c.inside && m.armed !== false) h += tagPrompt("Tap your phone to the bag's tag to open it");
     if (realBagPaired() && RealBag.state !== "connected") h += bleStatusBlock();
+    if (S.data.bag.key && !S.data.isExample) h += `<div class="pocket stack" style="gap:8px">
+        <label for="unlockInput">Tapped the tag and it opened in Chrome? Enter Chrome's code to open it here too.</label>
+        <input id="unlockInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" style="min-height:48px;font:inherit;font-size:22px;letter-spacing:.12em;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 12px">
+        <button class="btn" data-action="unlock-code" data-id="${m.id}">Open with the code</button>
+      </div>`;
     if (S.view.notHere) h += `<div class="notice bad" role="alert">${S.view.notHere === "unarmed" ? "This memory was sealed here a moment ago. It stays closed until you've left and come back." : S.view.notHere === "unknown" ? "Keepsake doesn't know where you are yet. Check that location is on, then try again." : `Not here yet. This memory opens within ${m.radius} m of ${esc(m.place.name)}, and you're ${fmtDist(c.dist)} away.`}</div>`;
     return h;
   }
@@ -1311,6 +1333,13 @@ function viewMemory() {
   } else {
     h += `<button class="btn primary" data-action="respond" data-id="${m.id}">Continue this memory</button>
       <p class="muted small" style="text-align:center">It closes again when you leave this page or walk away.</p>`;
+  }
+  if (!RealBag.supported && !S.data.isExample) {
+    h += `<div class="pocket stack" style="gap:6px;text-align:center"><span class="eyebrow">Open it in Bluefy too</span>
+      <p class="mono" id="unlockCode" style="font-size:34px;letter-spacing:.14em;margin:4px 0">··· ···</p>
+      <p class="muted small" style="margin:0">In Bluefy, open this memory and enter this code. It works for about 5 minutes.</p></div>
+      <div style="height:72px" aria-hidden="true"></div>`;
+    setTimeout(() => fillUnlockCode(m.id), 0);
   }
   return h;
 }
@@ -1345,7 +1374,7 @@ function viewPrivacy() {
   const bytes = memories.reduce((n, m) => n + m.box.ct.byteLength + m.responses.reduce((k, r) => k + r.box.ct.byteLength, 0), 0);
   const sample = memories[0]?.box.ct.subarray(0, 48);
   const hex = sample ? Array.from(sample, (b) => b.toString(16).padStart(2, "0")).join(" ") + " …" : "nothing yet";
-  const code = bag.key.match(/.{1,4}/g).join(" ");
+  const code = bag.key ? bag.key.match(/.{1,4}/g).join(" ") : "";
   let h = topbar("home");
   h += `<div class="stack"><span class="eyebrow">Settings &amp; privacy</span><h2>You, and what's kept.</h2></div>
     <div class="stack">
@@ -1357,8 +1386,17 @@ function viewPrivacy() {
     <div class="stack">
       <h3>Your bag's tag</h3>
       <p class="muted small">${S.data.tagSeenAt ? `Last tapped ${new Date(S.data.tagSeenAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.` : "Not set up yet. Write this bag's link onto the tag once, and tapping it opens Keepsake."}</p>
-      <button class="btn" data-action="tag-setup">${S.view.tagSetup ? "Hide the steps" : S.data.tagSeenAt ? "Write another tag" : "Set up the tag"}</button>
-      ${S.view.tagSetup ? tagSetupBlock(S.data.bag) : ""}
+      ${bag.key ? `<button class="btn" data-action="tag-setup">${S.view.tagSetup ? "Hide the steps" : S.data.tagSeenAt ? "Write another tag" : "Set up the tag"}</button>
+      ${S.view.tagSetup ? tagSetupBlock(S.data.bag) : ""}` : `<p class="small">This browser doesn't have the bag's key yet. Tap the bag's tag once and it will.</p>`}
+    </div>
+    <hr class="stitch">
+    <div class="stack">
+      <h3>Bluefy and Chrome</h3>
+      <p class="small">On iPhone, tapping the tag opens Chrome; Bluefy makes the bag buzz. They keep separate copies, so after saving memories in one, copy them to the other. Only sealed memories and places are copied, never the key: the tag gives that.</p>
+      ${S.data.copiedAt ? `<p class="muted small" style="margin:0">Last copied ${new Date(S.data.copiedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.</p>` : ""}
+      <div class="row"><button class="btn" data-action="copy-bag">Copy this bag${RealBag.supported ? " for Chrome" : ""}</button><button class="btn" data-action="paste-bag">Paste${RealBag.supported ? "" : " from Bluefy"}</button></div>
+      ${S.view.showCopy ? `<textarea id="copyBag" readonly style="min-height:90px;font-size:12px"></textarea>` : ""}
+      ${S.view.showPaste ? `<textarea id="pasteBag" placeholder="Paste here" style="min-height:90px;font-size:12px"></textarea>` : ""}
     </div>
     <hr class="stitch">
     <div class="stack">
@@ -1373,10 +1411,10 @@ function viewPrivacy() {
       <div class="kv"><b>Your location</b><span>Used only while the app is open, to seal a memory to a spot and to check you're back there. It isn't stored or sent anywhere${window.ReactNativeWebView ? ", except to Apple Maps once per memory to suggest the place's name" : ""}.</span></div>
       <div class="kv"><b>In the cloud</b><span>Nothing yet. When sync arrives it will hold only the sealed files, never the key.</span></div>
       <div class="kv"><b>What a sealed memory looks like</b><span class="mono">${hex}</span></div>
-      <div class="kv"><b>Recovery code</b><span class="muted small">If the bag's patch is ever lost, this code opens everything. Write it down and keep it somewhere safe.</span><span class="mono" id="recCode">${code}</span>
-        <button class="link" data-action="copy-code" style="justify-self:start">Copy the code</button></div>
+      ${code ? `<div class="kv"><b>Recovery code</b><span class="muted small">If the bag's patch is ever lost, this code opens everything. Write it down and keep it somewhere safe.</span><span class="mono" id="recCode">${code}</span>
+        <button class="link" data-action="copy-code" style="justify-self:start">Copy the code</button></div>` : ""}
     </div>
-    <button class="btn primary" data-action="export" id="exportBtn">Export everything</button>
+    <button class="btn primary" data-action="export" id="exportBtn" ${bag.key ? "" : "disabled"}>Export everything</button>
     <p class="muted small" id="exportNote">Photos as JPG, recordings as WAV, words as TXT, in one .zip. No special app needed to open them.</p>
     <hr class="stitch">`;
   if (S.view.confirmDelete) {
@@ -1400,17 +1438,16 @@ function viewWelcome() {
   // iPhone opened the tag's link in a browser without Bluetooth, and there's no bag here: the person's
   // Keepsake almost certainly lives in Bluefy. Say so, instead of offering to start a new, empty bag.
   if (step === "hello" && S.ob.tag && IS_IOS && !RealBag.supported && !S.ob.tagHere) return `
-    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>That's your Keepsake tag.</h1>
-      <p>But your iPhone opened its link in <b>${iosBrowserName()}</b>. ${iosBrowserName()} can't reach the bag over Bluetooth, and your memories live in <b>Bluefy</b>.</p>
-      <div class="local"><h3>So taps open Bluefy</h3>
-        <ol class="steps">
-          <li>Open <b>Settings</b> → <b>Apps</b> → <b>Default Apps</b> → <b>Browser App</b>.</li>
-          <li>Choose <b>Bluefy</b>, if it's in the list.</li>
-          <li>Tap the bag again. Keepsake opens in Bluefy, and the memory with it.</li>
-        </ol>
-        <p class="muted small" style="margin:0">If Bluefy isn't in that list, your iPhone can only open tag taps in another browser.</p>
-      </div></div>
-    <button class="link" data-action="ob-tag-here" style="align-self:center">Use Keepsake in ${iosBrowserName()} instead</button>`;
+    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>That's your bag's tag.</h1>
+      <p>Your memories are in <b>Bluefy</b>, and your iPhone opened the tag in <b>${iosBrowserName()}</b>. Bring them over once, and from then on tapping the tag opens them right here.</p>
+      <div class="local"><ol class="steps">
+        <li>In Bluefy: <b>Settings &amp; privacy</b> → <b>Copy this bag for Chrome</b>.</li>
+        <li>Come back here and tap <b>Paste from Bluefy</b>.</li>
+      </ol>
+      <p class="muted small" style="margin:0">Only sealed memories are copied. The key comes from the tag you just tapped.</p></div></div>
+    ${S.view.showPaste ? `<textarea id="pasteBag" placeholder="Paste here" style="min-height:90px;font-size:12px"></textarea>` : ""}
+    <button class="btn primary" data-action="paste-bag">Paste from Bluefy</button>
+    <button class="link" data-action="ob-tag-here" style="align-self:center">Start a new bag in ${iosBrowserName()} instead</button>`;
   if (step === "hello") return `
     <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>A bag that remembers.</h1>
       <p>Seal a photo, your voice or a few words to the place where something happened.</p>
@@ -1774,6 +1811,8 @@ function renderSim() {
     <hr class="stitch">
     <label class="toggle">Phone near the bag <input id="simNear" type="checkbox" ${S.sim.near ? "checked" : ""}></label>
     <label class="toggle">Haptic module powered <input id="simPowered" type="checkbox" ${S.sim.powered ? "checked" : ""}></label>
+    ${S.data && !S.data.isExample ? `<label class="toggle">Practice mode: virtual taps open memories <input id="simPractice" type="checkbox" ${S.sim.practice ? "checked" : ""}></label>
+    <p class="small muted" style="margin:0">${S.sim.practice ? "On: the Tap button opens memories without the real tag. Turn it off for the real thing." : "Off: only the bag's real tag (or Chrome's code) opens memories."}</p>` : ""}
     <p class="small muted" style="margin:0">${realBagPaired() ? "A real bag is paired, so buzzes go to it; this switch only affects the virtual bag." : "Applies to the virtual bag."}</p>
     <hr class="stitch">
     <h3 style="font-size:22px">Real bag (Bluetooth)</h3>
@@ -1860,8 +1899,79 @@ async function doPass(named) {
   await Bag.waitForClasp();
   await Bag.open();
 }
+/* ---------- moving a bag between browsers on this phone (Bluefy and Chrome keep separate storage) ---------- */
+// The text holds the bag's sealed memories and places, never its key: the other browser can't read them
+// until the bag's tag is tapped there.
+function bagTransferText() {
+  const d = S.data, box = (b) => ({ iv: b.iv, ct: b64url(b.ct) });
+  const out = { v: 1, bag: { id: d.bag.id, name: d.bag.name, claimedAt: d.bag.claimedAt }, owners: d.owners,
+    memories: d.memories.map((m) => ({ ...m, box: box(m.box), responses: m.responses.map((r) => ({ ...r, box: box(r.box) })) })) };
+  return "KEEPSAKE1." + b64url(new TextEncoder().encode(JSON.stringify(out)));
+}
+function importBag(text) {
+  const t = /KEEPSAKE1\.([A-Za-z0-9_-]+)/.exec(String(text || ""));
+  if (!t) throw new Error("That isn't a copied Keepsake bag. In Bluefy: Settings & privacy → Copy this bag for Chrome.");
+  let data; try { data = JSON.parse(new TextDecoder().decode(unb64url(t[1]))); } catch { throw new Error("The copied bag got cut off. Copy it again."); }
+  const box = (b) => ({ iv: b.iv, ct: unb64url(b.ct) });
+  // This browser can't see you leave and come back (it isn't open while you walk); Bluefy checks that, and buzzes.
+  const mems = data.memories.map((m) => ({ ...m, armed: true, box: box(m.box), responses: m.responses.map((r) => ({ ...r, box: box(r.box) })) }));
+  if (S.data && S.data.bag.id === data.bag.id) {
+    let added = 0;
+    for (const m of mems) {
+      const have = S.data.memories.find((x) => x.id === m.id);
+      if (!have) { S.data.memories.push(m); added++; continue; }
+      for (const r of m.responses) if (!have.responses.some((x) => x.id === r.id)) have.responses.push(r);
+    }
+    if (data.owners.length > S.data.owners.length) S.data.owners = data.owners;
+    persist(); return added;
+  }
+  if (S.data && !S.data.isExample) throw new Error("This browser already holds a different bag. Delete it first in Settings & privacy.");
+  S.opened.clear();
+  S.data = { bag: { ...data.bag, key: null }, owners: data.owners, memories: mems, isExample: false, onboarded: true, imported: Date.now() };
+  persist(); return mems.length;
+}
+async function readPastedBag() {
+  const box = $("#pasteBag");
+  if (box && box.value.trim()) return box.value;
+  try { return await navigator.clipboard.readText(); } catch { return ""; }
+}
+
+/* ---------- Chrome's code: open a memory in Bluefy after tapping the tag in Chrome ---------- */
+// A 6-digit code from the bag's key, the memory and the 5-minute window. It proves the tag was tapped
+// (only the tag gives Chrome the key) and says nothing about the key itself.
+async function unlockCode(memId, windowsAgo = 0) {
+  const win = Math.floor(Date.now() / 300000) - windowsAgo;
+  const enc = new TextEncoder(), raw = unb64url(S.data.bag.key), label = enc.encode("keepsake-unlock-v1|");
+  const seed = new Uint8Array(label.length + raw.length); seed.set(label); seed.set(raw, label.length);
+  const k = await crypto.subtle.importKey("raw", await crypto.subtle.digest("SHA-256", seed), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(`${memId}.${win}`)));
+  return String((((sig[0] << 24) | (sig[1] << 16) | (sig[2] << 8) | sig[3]) >>> 0) % 1000000).padStart(6, "0");
+}
+async function codeFits(memId, typed) {
+  const digits = String(typed || "").replace(/\D/g, "");
+  if (digits.length !== 6 || !S.data?.bag.key) return false;
+  for (const ago of [0, 1]) if ((await unlockCode(memId, ago)) === digits) return true;
+  return false;
+}
+async function fillUnlockCode(memId) {
+  const el = $("#unlockCode"); if (!el || !S.data?.bag.key) return;
+  const c = await unlockCode(memId);
+  el.textContent = `${c.slice(0, 3)} ${c.slice(3)}`;
+}
+
+/** Virtual taps open memories only in the example bag, or in practice mode (Virtual bag panel). */
+const virtualOpens = () => !!(S.data?.isExample || S.sim.practice);
 async function openMemory(m, viaHome) {
-  if (!(await waitForTap("Tap your phone to the bag's tag to open it", { type: "open", id: m.id, viaHome }))) { render(); return; }
+  const how = await waitForTap("Tap your phone to the bag's tag to open it", { type: "open", id: m.id, viaHome });
+  if (!how) { render(); return; }
+  if (!how.real && !virtualOpens()) {
+    Timing.take();
+    toast(IS_IOS && RealBag.supported
+      ? "Opening needs the bag's real tag. Tap it: the memory opens in Chrome, with a code to open it here too."
+      : "Opening a memory needs the bag's real tag. (To practise without it: Virtual bag → Practice mode.)", 6000);
+    render(); return;
+  }
+  if (!S.data.bag.key) { Timing.take(); toast("This browser doesn't have the bag's key yet. Tap the bag's real tag once."); render(); return; }
   const tap = Timing.take();
   const c = placeCheck(m);
   if (!c.known) { if (viaHome) { toast("Keepsake doesn't know where you are yet. Check that location is on."); render(); return; } S.view.notHere = "unknown"; render(); return; }
@@ -2024,6 +2134,31 @@ document.addEventListener("click", async (e) => {
     case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
     case "timing-clear": return Timing.clear();
     case "radius-recommended": return setDraftRadius(RADIUS.recommended);
+    case "unlock-code": {
+      const m = S.data.memories.find((x) => x.id === a.id); if (!m) return;
+      if (!(await codeFits(m.id, $("#unlockInput")?.value))) return toast("That code doesn't fit this memory. Codes last about 5 minutes: tap the tag again for a new one.", 5000);
+      Timing.markTap("code from Chrome");
+      S.preTapped = { at: Date.now(), real: true }; // Chrome's code stands for the tag tap
+      return openMemory(m, false);
+    }
+    case "copy-bag": {
+      const text = bagTransferText();
+      try { await navigator.clipboard.writeText(text); }
+      catch { S.view.showCopy = true; render(); const t = $("#copyBag"); if (t) { t.value = text; t.select(); } return toast("Select all of it and copy it."); }
+      S.data.copiedAt = Date.now(); persist(); render();
+      return toast("Copied. Open Chrome, then tap the bag's tag (or Settings & privacy → Paste) to add it there.", 6000);
+    }
+    case "paste-bag": {
+      const text = await readPastedBag();
+      if (!text) { S.view.showPaste = true; render(); return toast("Paste it into the box, then tap Add it again."); }
+      let n; try { n = importBag(text); } catch (err) { return toast(err.message, 6000); }
+      const tag = S.ob.tag; S.ob.tag = null;
+      Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
+      S.view = { name: "home" }; render(); bagFace();
+      toast(`${n} memor${n === 1 ? "y" : "ies"} added to this browser.`);
+      if (tag) { if (tag.bagId !== S.data.bag.id) return toast("The tag you tapped belongs to a different bag."); return onTagTap({ ...tag, tapAt: performance.now() }); }
+      return;
+    }
     case "replay-intro": S.ob = { name: currentOwner().name === "You" ? "" : currentOwner().name }; return go("welcome", { step: "hello" });
     case "replay-done": return go("home");
     case "nfc-listen": return startNfc(true);
@@ -2037,7 +2172,7 @@ document.addEventListener("click", async (e) => {
       toast("Written. This tag now opens this bag.");
       if (S.data && !S.claimBag) { S.data.tagSeenAt = Date.now(); persist(); }
       // Writing the tag means the phone touched it: that counts as the tap a claim is waiting for.
-      if (S.waitTap && S.claimBag) { const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve(true); return; }
+      if (S.waitTap && S.claimBag) { const w = S.waitTap; S.waitTap = null; clearPending(); renderSim(); w.resolve({ real: true }); return; }
       return render();
     }
     case "allow-location": await Loc.start(); if (Loc.status === "denied") toast("Location is off for Keepsake. Turn it on in your phone's Settings."); return render();
@@ -2134,6 +2269,7 @@ document.addEventListener("change", (e) => {
   if (t.id === "simOffset") { S.sim.offset = +t.value; saveSim(); return refreshAfterSim(); }
   if (t.id === "simNear") { S.sim.near = t.checked; return; }
   if (t.id === "simPowered") { S.sim.powered = t.checked; return; }
+  if (t.id === "simPractice") { S.sim.practice = t.checked; return renderSim(); }
 });
 document.addEventListener("input", (e) => {
   if (e.target.id === "memRadius") setDraftRadius(e.target.value);
@@ -2159,7 +2295,7 @@ $("#simOpen").addEventListener("click", () => { $("#sim").removeAttribute("data-
 setInterval(() => { if (Date.now() - S.sim.lastBuzz < 1500) renderSim(); }, 500);
 window.addEventListener("pagehide", () => S.opened.clear()); // memories close again when you leave
 LinkTags.start(onTagTap); // the tag's link opened in this tab (iPhone sometimes reuses the tab)
-document.addEventListener("visibilitychange", () => { if (!document.hidden) startNfc(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) startNfc(); else if (S.ringing) stopBuzz(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && S.view.name === "memory") { const m = S.data?.memories.find((x) => x.id === S.view.id); if (m) { closeMemory(m); render(); } } });
 
 /* ---------- boot ---------- */

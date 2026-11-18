@@ -128,7 +128,19 @@ Run each test 10 times and write down the median and the worst:
 
 When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. A memory opens only when all three hold: the phone is inside the circle, the bag has **left the circle and come back** since the memory was sealed, and the bag's tag is tapped. GPS tolerance scales with the circle (at most half its radius, never over 25 m), and "left" needs a margin past the edge (30% of the radius, between 5 and 15 m), so GPS wobble neither opens nor re-arms a memory. Circles under 20 m may only work outdoors.
 
-On iPhone, a tag tap always opens the tag's link in the **default browser**; iPhone hands NFC links to no other app. For the demo in Bluefy, Bluefy has to be the default browser (Settings → Apps → Default Apps → Browser App), if iOS offers it there. When a tap lands in another iPhone browser with no bag in it, Keepsake says so instead of starting a new bag.
+### The iPhone demo: Bluefy buzzes, Chrome opens
+
+On iPhone a tag tap always opens the tag's link in the **default browser** (Chrome or Safari), and Bluefy can't be made the default. So the iPhone flow uses both:
+
+1. **Bluefy** holds the bag: pairing, saving memories, and the walk. It tracks leaving and coming back, and makes the bag buzz (`alert`) on arrival.
+2. **Tap the real tag** → the iPhone opens Chrome → the memory opens there (inside the circle). Bluefy going to the background sends `stop`.
+3. **Optional:** the bottom of Chrome's memory shows a 6-digit code. Entering it on that memory in Bluefy opens it there too (Bluefy checks the circle and leave-and-return itself, and the bag gives its `tap`). The code is an HMAC of the bag's key, the memory and a 5-minute window: it proves the tag was tapped and says nothing about the key.
+
+Chrome and Bluefy keep separate storage and there is no server, so memories are copied once from Bluefy to Chrome: **Settings & privacy → Copy this bag for Chrome** in Bluefy, then **Paste from Bluefy** in Chrome (Chrome offers it on the first tag tap). The copy holds sealed memories and places only, never the key: Chrome learns the key from the tag, and checks it opens the memories. Copy again after saving new ones (Bluefy's home screen reminds you).
+
+**The real tag is required to open a memory**: the Virtual bag's Tap opens memories only in the example bag, or with **Practice mode** on (Virtual bag panel). It still stands in for the tag when claiming, sealing and passing down.
+
+**Known gap:** Chrome isn't open while you walk, so it can't see you leave and come back. Copied memories count as "left and came back" in Chrome; Bluefy enforces that rule (it's what triggers the buzz, and it checks again when Chrome's code is used).
 
 ## Firmware (the bag)
 
