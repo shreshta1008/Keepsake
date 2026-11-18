@@ -128,6 +128,13 @@ Run each test 10 times and write down the median and the worst:
 
 When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. A memory opens only when all three hold: the phone is inside the circle, the bag has **left the circle and come back** since the memory was sealed, and the bag's tag is tapped. GPS tolerance scales with the circle (at most half its radius, never over 25 m), and "left" needs a margin past the edge (30% of the radius, between 5 and 15 m), so GPS wobble neither opens nor re-arms a memory. Circles under 20 m may only work outdoors.
 
+### Demoing with your real location
+
+- Virtual bag → **Where you are** must be **My real location** (a pretend place is remembered between visits; when one is on, the home screen says so with a **Use my real location** button).
+- iPhone: Settings → **Bluefy** → **Location** → **While Using the App**, with **Precise Location** on. Keep Bluefy open with the screen on while you walk: iPhone pauses web pages in the background.
+- The home screen's live line shows GPS accuracy, the distance to the nearest memory, and how far to walk to count as leaving (for a 5 m circle, about 13 m).
+- Indoors, phone GPS is often only accurate to 10 to 30 m, too coarse for a 5 m circle; the save screen warns when GPS is coarser than the circle. For an indoor demo, seal near a window or just outside the door, or use 25 to 50 m and walk further.
+
 ### The iPhone demo: Bluefy buzzes, Chrome opens
 
 On iPhone a tag tap always opens the tag's link in the **default browser** (Chrome or Safari), and Bluefy can't be made the default. So the iPhone flow uses both:

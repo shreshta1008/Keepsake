@@ -461,7 +461,25 @@ function saveSim() { try { localStorage.setItem("keepsake.sim", JSON.stringify({
 function pretendNote() {
   if (S.sim.place === "real") return "";
   const p = PLACES.find((x) => x.id === S.sim.place);
-  return `<div class="notice small">Pretending you're at <b>${esc(p?.name)}</b>${S.sim.offset ? `, ${fmtDist(S.sim.offset)} away` : ""}. To use your real location, change it in the Virtual bag panel.</div>`;
+  return `<div class="notice small stack" style="gap:8px">
+    <span><b>Pretend place on:</b> Keepsake thinks you're at <b>${esc(p?.name)}</b>${S.sim.offset ? `, ${fmtDist(S.sim.offset)} away` : ""}, and ignores your real GPS.</span>
+    <button class="btn" data-action="use-real-location">Use my real location</button></div>`;
+}
+/** One line, live, for demos: is GPS on, how good it is, and where you stand with the nearest memory. */
+function liveLocText() {
+  if (S.sim.place !== "real") return "Pretend place on: your real location is ignored.";
+  const p = here();
+  if (!p) return Loc.status === "denied" ? "Location is off for this browser." : Loc.status === "off" ? "Location isn't on yet." : "Finding where you are…";
+  const acc = `GPS ±${Math.round(p.acc || 0)} m`;
+  if (!S.data?.memories.length) return `Live: ${acc}.`;
+  const m = [...S.data.memories].sort((a, b) => placeCheck(a).dist - placeCheck(b).dist)[0];
+  const c = placeCheck(m);
+  // How far out counts as "left": the circle, the largest GPS allowance, and the margin (see placeCheck).
+  const leaveAt = Math.ceil(m.radius + Math.min(Math.max(3, m.radius * 0.5), 25) + Math.min(15, Math.max(5, m.radius * 0.3)));
+  const state = c.far ? "outside its circle (counts as left)"
+    : m.armed === false ? `${c.inside ? "inside its circle" : "just outside its circle"}: walk about ${leaveAt} m away to count as leaving`
+    : c.inside ? "inside its circle" : "just outside its circle";
+  return `Live: ${acc} · ${esc(m.place.name)} ${fmtDist(c.dist)} away, ${state}.`;
 }
 
 /* ---------- talking to the Keepsake app (when this page runs inside it) ---------- */
@@ -605,7 +623,7 @@ function onLocationChange(now = false) {
   }
   if (now) return;
   // Keep distances on screen current, without re-rendering under someone's fingers.
-  if (!simTimer) simTimer = setTimeout(() => { simTimer = 0; if (!$("#sim").contains(document.activeElement)) { const el = $("#locStatus"); if (el) el.textContent = locStatusText(); } }, 800);
+  if (!simTimer) simTimer = setTimeout(() => { simTimer = 0; const live = $("#liveLoc"); if (live) live.textContent = liveLocText(); if (!$("#sim").contains(document.activeElement)) { const el = $("#locStatus"); if (el) el.textContent = locStatusText(); } }, 800);
   if (!renderTimer) renderTimer = setTimeout(() => {
     renderTimer = 0;
     if (S.waitTap || document.activeElement?.matches?.("input, textarea, select")) return;
@@ -648,7 +666,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.seal1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.live2"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1156,6 +1174,7 @@ function viewHome() {
   let html = `<div class="topbar"><button class="link" data-action="close-bag">Close the bag</button>${S.data.isExample ? `<span class="pill">Example bag</span>` : `<span class="pill">Generation ${me.gen}</span>`}</div>${pretendNote()}`;
   html += `<div class="stack"><h1>${esc(S.data.bag.name)}</h1>
     <p class="muted">${sentence(`Carried by ${owners.map((o) => esc(o.name)).join(", then ")}`)} ${memories.length} memor${memories.length === 1 ? "y" : "ies"} sealed.</p></div>`;
+  html += `<p class="small muted" id="liveLoc" role="status" style="margin:0">${liveLocText()}</p>`;
   html += ringsSVG();
   const waiting = arrivalHere();
   html += waiting || S.waitTap
@@ -1231,7 +1250,7 @@ function setDraftRadius(r) {
 function viewSave() {
   const v = S.view, d = (v.draft ||= { kind: null, text: "", media: null, mime: "", mediaUrl: "", author: currentOwner().name, placeName: "", radius: RADIUS.recommended });
   const step = v.step || "kind";
-  let h = topbar(step === "kind" ? "home" : null);
+  let h = topbar(step === "kind" ? "home" : null) + (step === "place" ? pretendNote() : "");
   if (step === "kind") {
     h += `<div class="stack"><span class="eyebrow">Save a memory</span><h2>What would you like to keep?</h2></div>
       <div class="stack">
@@ -1272,6 +1291,7 @@ function viewSave() {
     if (d.placeFor !== key && !d.placeTyped) { d.placeFor = key; suggestPlaceName(p, d); }
     h += `<div class="stack"><span class="eyebrow">The place</span><h2>This memory will wait here.</h2>
       <p class="coords">${fmtCoords(p)}${p.pretend ? " · pretend place" : p.acc ? ` · accurate to ${Math.round(p.acc)} m` : ""}</p>
+      ${!p.pretend && p.acc > (d.radius || RADIUS.recommended) ? `<div class="notice small">GPS is only accurate to about ${Math.round(p.acc)} m right now, wider than this ${d.radius || RADIUS.recommended} m circle. Indoors that's normal: step near a window or outside, or choose a bigger circle.</div>` : ""}
       <div><label for="placeName">What is this place?</label><input id="placeName" type="text" value="${esc(d.placeName)}" placeholder="${d.naming ? "Finding its name…" : "Name this place"}" autocomplete="off"></div>
       ${radiusControl(d.radius || RADIUS.recommended)}
       <p>To open it, the bag has to leave this circle and come back into it, then you tap the bag's tag. Until then it stays sealed, even for you.</p></div>
@@ -2132,6 +2152,13 @@ document.addEventListener("click", async (e) => {
     case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
     case "timing-clear": return Timing.clear();
     case "radius-recommended": return setDraftRadius(RADIUS.recommended);
+    case "use-real-location": {
+      S.sim.place = "real"; S.sim.offset = 0; saveSim();
+      const st = await Loc.start();
+      if (st === "denied") toast("Location is off for this browser. On iPhone: Settings → Bluefy → Location → While Using, and Precise Location on.", 7000);
+      else toast("Using your real location.");
+      renderSim(); return refreshAfterSim();
+    }
     case "unlock-code": {
       const m = S.data.memories.find((x) => x.id === a.id); if (!m) return;
       if (!(await codeFits(m.id, $("#unlockInput")?.value))) return toast("That code doesn't fit this memory. Codes last about 5 minutes: tap the tag again for a new one.", 5000);
