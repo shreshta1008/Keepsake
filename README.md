@@ -126,7 +126,13 @@ Run each test 10 times and write down the median and the worst:
 
 ## Where a memory opens
 
-When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. A memory opens only when all three hold: the phone is inside the circle, the bag has **left the circle and come back** since the memory was sealed, and the bag's tag is tapped. GPS tolerance scales with the circle (at most half its radius, never over 25 m), and "left" needs a margin past the edge (30% of the radius, between 5 and 15 m), so GPS wobble neither opens nor re-arms a memory. Circles under 20 m may only work outdoors.
+When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. The bag buzzes when the phone is back inside the circle **after leaving it** since the memory was sealed; then the tag's code opens it.
+
+Location is deliberately forgiving:
+- **Smoothed GPS:** readings from the last few seconds are averaged, trusting precise and recent ones most, so one wild reading doesn't move you.
+- **Inside if you could be:** GPS uncertainty (up to 30 m) counts in your favour.
+- **Left only when clearly outside:** "left the circle" needs you outside even allowing for GPS error, plus a margin (30% of the radius, 5 to 15 m), so wobble never counts as leaving and coming back. The live line on the home screen says how far to walk.
+- **Once the bag has buzzed for a memory, the tag's code opens it wherever you are**, until you've clearly walked away from that place.
 
 ### The introduction in every new tab
 
