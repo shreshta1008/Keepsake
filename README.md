@@ -124,6 +124,12 @@ Run each test 10 times and write down the median and the worst:
 | Tap to buzz, warm, 1 m | | | | |
 | Tap to buzz, cold, 1 m | | | | |
 
+## Where a memory opens
+
+When saving, the person sets the memory's circle on the "place" step: 5 m to 500 m, 50 m recommended. A memory opens only when all three hold: the phone is inside the circle, the bag has **left the circle and come back** since the memory was sealed, and the bag's tag is tapped. GPS tolerance scales with the circle (at most half its radius, never over 25 m), and "left" needs a margin past the edge (30% of the radius, between 5 and 15 m), so GPS wobble neither opens nor re-arms a memory. Circles under 20 m may only work outdoors.
+
+On iPhone, a tag tap always opens the tag's link in the **default browser**; iPhone hands NFC links to no other app. For the demo in Bluefy, Bluefy has to be the default browser (Settings → Apps → Default Apps → Browser App), if iOS offers it there. When a tap lands in another iPhone browser with no bag in it, Keepsake says so instead of starting a new bag.
+
 ## Firmware (the bag)
 
 `firmware/keepsake_bag/keepsake_bag.ino`: ESP32-S3 + DRV2605L (Qwiic, SDA 1 / SCL 2) + ERM motor.

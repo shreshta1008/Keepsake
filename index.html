@@ -371,7 +371,7 @@ const PLACES = [
   { id: "india",   name: "India Point Park",             lat: 41.81960, lng: -71.39150 },
   { id: "museum",  name: "RISD Museum",                  lat: 41.82680, lng: -71.40860 },
 ];
-const OFFSETS = [ [0, "Right here"], [40, "40 m away"], [120, "120 m away"], [400, "400 m away"], [3000, "3 km away"] ];
+const OFFSETS = [ [0, "Right here"], [3, "3 m away"], [10, "10 m away"], [25, "25 m away"], [40, "40 m away"], [80, "80 m away"], [120, "120 m away"], [400, "400 m away"], [700, "700 m away"], [3000, "3 km away"] ];
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -542,8 +542,11 @@ function placeCheck(m) {
   if (!p) return { known: false, dist: Infinity, inside: false, far: false };
   const dist = haversine(p, m.place);
   // Phone GPS is good to a few metres outdoors: give it the benefit of its own accuracy, capped.
-  const slack = Math.min(p.acc || 0, 25);
-  return { known: true, dist, inside: dist <= m.radius + slack, far: dist > m.radius + slack + 15 };
+  // Small circles get a small allowance, so a 5 m circle isn't quietly stretched to 30 m.
+  const slack = Math.min(p.acc || 0, Math.max(3, m.radius * 0.5), 25);
+  // "Left the circle" needs a margin past its edge, so GPS wobble at the edge doesn't count as leaving.
+  const margin = Math.min(15, Math.max(5, m.radius * 0.3));
+  return { known: true, dist, inside: dist <= m.radius + slack, far: dist > m.radius + slack + margin };
 }
 
 function fmtCoords(p) {
@@ -645,7 +648,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-17.alert1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.radius1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1180,8 +1183,36 @@ function viewHome() {
   return html;
 }
 
+/* ---------- the circle a memory opens in ---------- */
+const RADIUS = { min: 5, max: 500, recommended: 50 };
+const clampRadius = (r) => Math.max(RADIUS.min, Math.min(RADIUS.max, Math.round(+r || RADIUS.recommended)));
+function radiusNote(r) {
+  return r < 20 ? "Phone GPS is often off by 5 to 15 m, so a circle this small may only open outdoors with a clear view of the sky."
+    : r > 200 ? "A wide circle: it opens anywhere in a large area, such as a whole park."
+    : r === RADIUS.recommended ? "Recommended: big enough for GPS, small enough to mean this spot."
+    : "";
+}
+function radiusControl(r) {
+  return `<div class="stack" style="gap:6px">
+    <label for="memRadius">It opens within <b id="memRadiusVal">${r} m</b> of this spot</label>
+    <input id="memRadius" type="range" min="${RADIUS.min}" max="${RADIUS.max}" step="5" value="${r}" aria-describedby="memRadiusNote">
+    <div class="small muted" style="display:flex;justify-content:space-between"><span>${RADIUS.min} m</span><span>${RADIUS.max} m</span></div>
+    <button class="link" data-action="radius-recommended" style="align-self:start;min-height:0;padding:0" ${r === RADIUS.recommended ? "hidden" : ""}>Use ${RADIUS.recommended} m (recommended)</button>
+    <p class="small muted" id="memRadiusNote" style="margin:0">${radiusNote(r)}</p>
+  </div>`;
+}
+function setDraftRadius(r) {
+  const d = S.view.draft; if (!d) return;
+  d.radius = clampRadius(r);
+  const val = $("#memRadiusVal"), note = $("#memRadiusNote"), input = $("#memRadius"), rec = $('[data-action="radius-recommended"]');
+  if (val) val.textContent = `${d.radius} m`;
+  if (note) note.textContent = radiusNote(d.radius);
+  if (input && +input.value !== d.radius) input.value = d.radius;
+  if (rec) rec.hidden = d.radius === RADIUS.recommended;
+}
+
 function viewSave() {
-  const v = S.view, d = (v.draft ||= { kind: null, text: "", media: null, mime: "", mediaUrl: "", author: currentOwner().name, placeName: "" });
+  const v = S.view, d = (v.draft ||= { kind: null, text: "", media: null, mime: "", mediaUrl: "", author: currentOwner().name, placeName: "", radius: RADIUS.recommended });
   const step = v.step || "kind";
   let h = topbar(step === "kind" ? "home" : null);
   if (step === "kind") {
@@ -1225,7 +1256,8 @@ function viewSave() {
     h += `<div class="stack"><span class="eyebrow">The place</span><h2>This memory will wait here.</h2>
       <p class="coords">${fmtCoords(p)}${p.pretend ? " · pretend place" : p.acc ? ` · accurate to ${Math.round(p.acc)} m` : ""}</p>
       <div><label for="placeName">What is this place?</label><input id="placeName" type="text" value="${esc(d.placeName)}" placeholder="${d.naming ? "Finding its name…" : "Name this place"}" autocomplete="off"></div>
-      <p>It will open within <b>${S.sim.radius} m</b> of this spot, and only after you've left and come back. That includes you.</p></div>
+      ${radiusControl(d.radius || RADIUS.recommended)}
+      <p>To open it, the bag has to leave this circle and come back into it, then you tap the bag's tag. Until then it stays sealed, even for you.</p></div>
       <button class="btn primary" data-step="seal">Next: seal it</button>`;
   } else if (step === "seal") {
     h += `<div class="stack"><span class="eyebrow">Seal</span><h2>${S.waitTap ? "Now hold your phone to the bag." : "Press and hold to seal this memory."}</h2>
@@ -1361,8 +1393,24 @@ function viewPrivacy() {
 }
 
 /* ---------- first launch: who you are, where you are, which bag ---------- */
+/** Which iPhone browser this is, by name, for plain instructions. */
+const iosBrowserName = () => /CriOS/.test(navigator.userAgent) ? "Chrome" : /FxiOS/.test(navigator.userAgent) ? "Firefox" : /EdgiOS/.test(navigator.userAgent) ? "Edge" : "Safari";
 function viewWelcome() {
   const step = S.view.step || "hello";
+  // iPhone opened the tag's link in a browser without Bluetooth, and there's no bag here: the person's
+  // Keepsake almost certainly lives in Bluefy. Say so, instead of offering to start a new, empty bag.
+  if (step === "hello" && S.ob.tag && IS_IOS && !RealBag.supported && !S.ob.tagHere) return `
+    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>That's your Keepsake tag.</h1>
+      <p>But your iPhone opened its link in <b>${iosBrowserName()}</b>. ${iosBrowserName()} can't reach the bag over Bluetooth, and your memories live in <b>Bluefy</b>.</p>
+      <div class="local"><h3>So taps open Bluefy</h3>
+        <ol class="steps">
+          <li>Open <b>Settings</b> → <b>Apps</b> → <b>Default Apps</b> → <b>Browser App</b>.</li>
+          <li>Choose <b>Bluefy</b>, if it's in the list.</li>
+          <li>Tap the bag again. Keepsake opens in Bluefy, and the memory with it.</li>
+        </ol>
+        <p class="muted small" style="margin:0">If Bluefy isn't in that list, your iPhone can only open tag taps in another browser.</p>
+      </div></div>
+    <button class="link" data-action="ob-tag-here" style="align-self:center">Use Keepsake in ${iosBrowserName()} instead</button>`;
   if (step === "hello") return `
     <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>A bag that remembers.</h1>
       <p>Seal a photo, your voice or a few words to the place where something happened.</p>
@@ -1723,7 +1771,6 @@ function renderSim() {
     <div><label for="simPlace">Where you are</label><select id="simPlace"><option value="real" ${S.sim.place === "real" ? "selected" : ""}>My real location</option><optgroup label="Pretend I'm at">${PLACES.map((p) => `<option value="${p.id}" ${p.id === S.sim.place ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup></select></div>
     ${S.sim.place === "real" ? `<p class="small muted" id="locStatus">${locStatusText()}</p>${Loc.status === "off" || Loc.status === "denied" ? `<button class="btn" data-action="allow-location">Use my location</button>` : ""}` : ""}
     <div ${S.sim.place === "real" ? "hidden" : ""}><label for="simOffset">Distance from that spot</label><select id="simOffset">${OFFSETS.map(([m, l]) => `<option value="${m}" ${m === S.sim.offset ? "selected" : ""}>${l}</option>`).join("")}</select></div>
-    <div><label for="simRadius">Place radius for new memories: <b>${S.sim.radius} m</b></label><input id="simRadius" type="range" min="25" max="500" step="25" value="${S.sim.radius}"></div>
     <hr class="stitch">
     <label class="toggle">Phone near the bag <input id="simNear" type="checkbox" ${S.sim.near ? "checked" : ""}></label>
     <label class="toggle">Haptic module powered <input id="simPowered" type="checkbox" ${S.sim.powered ? "checked" : ""}></label>
@@ -1781,7 +1828,7 @@ async function doSeal() {
   const p = p0;
   const meta = { kind: d.kind, text: d.text.trim(), author: d.author.trim() || currentOwner().name, at: Date.now(), mime: d.mime };
   const box = await seal(S.data.bag.key, meta, d.media);
-  const m = { id: uid(), gen: currentOwner().gen, author: meta.author, kind: d.kind, at: meta.at, place: { name: d.placeName.trim() || p.name || `Near ${fmtCoords(p)}`, lat: p.lat, lng: p.lng, acc: p.acc || 0 }, radius: S.sim.radius, armed: false, box, responses: [] };
+  const m = { id: uid(), gen: currentOwner().gen, author: meta.author, kind: d.kind, at: meta.at, place: { name: d.placeName.trim() || p.name || `Near ${fmtCoords(p)}`, lat: p.lat, lng: p.lng, acc: p.acc || 0 }, radius: clampRadius(d.radius), armed: false, box, responses: [] };
   S.data.memories.push(m); persist();
   if (d.mediaUrl) URL.revokeObjectURL(d.mediaUrl);
   // The memory slips down into the bag, the flap closes, the clasp snaps.
@@ -1976,6 +2023,7 @@ document.addEventListener("click", async (e) => {
     case "ble-fx": { const n = Math.round(+($("#simFx")?.value || 0)); S.sim.fx = n; return testBuzz(`fx:${n}`); }
     case "ble-forget": await RealBag.forget(); render(); return toast("This phone forgot the bag. Buzzes show on screen only.");
     case "timing-clear": return Timing.clear();
+    case "radius-recommended": return setDraftRadius(RADIUS.recommended);
     case "replay-intro": S.ob = { name: currentOwner().name === "You" ? "" : currentOwner().name }; return go("welcome", { step: "hello" });
     case "replay-done": return go("home");
     case "nfc-listen": return startNfc(true);
@@ -1995,6 +2043,7 @@ document.addEventListener("click", async (e) => {
     case "allow-location": await Loc.start(); if (Loc.status === "denied") toast("Location is off for Keepsake. Turn it on in your phone's Settings."); return render();
     case "ob-allow": { const st = await Loc.start(); if (st === "denied") toast("No problem. You can turn location on later in Settings."); return obStep("bag"); }
     case "ob-example": return finishOnboarding(await makeExample(S.ob.name));
+    case "ob-tag-here": S.ob.tagHere = true; return obStep("hello");
     case "ob-tagbag": S.claimBag = { id: S.ob.tag.bagId, key: S.ob.tag.key }; S.data = null; S.view = { name: "claim", step: "name" }; render(); return;
     case "copy-tag": {
       const bag = S.claimBag || S.data.bag, link = tagUrl(bag).replace(/^https:\/\//, "");
@@ -2087,7 +2136,7 @@ document.addEventListener("change", (e) => {
   if (t.id === "simPowered") { S.sim.powered = t.checked; return; }
 });
 document.addEventListener("input", (e) => {
-  if (e.target.id === "simRadius") { S.sim.radius = +e.target.value; saveSim(); e.target.previousElementSibling.querySelector("b").textContent = `${S.sim.radius} m`; }
+  if (e.target.id === "memRadius") setDraftRadius(e.target.value);
 });
 function refreshAfterSim() {
   onLocationChange(true);
@@ -2141,7 +2190,7 @@ function retireTab() {
     // First launch: get to know the person before handing them a bag.
     Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
     S.view = { name: "welcome", step: "hello" }; render();
-    if (tag) await onTagTap(tag);
+    if (tag) { await onTagTap(tag); render(); }
     return;
   }
   S.data = saved;
