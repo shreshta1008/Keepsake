@@ -666,7 +666,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.intro1"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.send1"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1198,8 +1198,9 @@ function viewHome() {
   const newest = Math.max(0, ...memories.map((m) => m.at));
   if (IS_IOS && RealBag.supported && !S.data.isExample && memories.length && newest > (S.data.copiedAt || 0)) html += `<section class="pocket stack" aria-label="Copy to Chrome">
       <div class="chapter-head"><h3>New memories aren't in Chrome yet</h3></div>
-      <p class="small">Tapping the tag opens Chrome. Copy this bag so Chrome can open them there.</p>
-      <button class="btn" data-action="copy-bag">Copy this bag for Chrome</button></section>`;
+      <p class="small">Tapping the tag opens Chrome. Send them there now, so the tag opens them straight away.</p>
+      <button class="btn" data-action="send-chrome">Send to Chrome</button>
+      <p class="muted small" style="margin:0">Chrome opens and adds them. Then tap <b>◀ Bluefy</b> at the top left to come back.</p></section>`;
   if (!realBagPaired()) html += `<section class="pocket stack" aria-label="Your bag's buzzer">
       <div class="chapter-head"><h3>Connect your bag's buzzer</h3><span class="muted small">Bluetooth</span></div>
       ${RealBag.supported
@@ -1420,7 +1421,8 @@ function viewPrivacy() {
       <h3>Bluefy and Chrome</h3>
       <p class="small">On iPhone, tapping the tag opens Chrome; Bluefy makes the bag buzz. They keep separate copies, so after saving memories in one, copy them to the other. Only sealed memories and places are copied, never the key: the tag gives that.</p>
       ${S.data.copiedAt ? `<p class="muted small" style="margin:0">Last copied ${new Date(S.data.copiedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.</p>` : ""}
-      <div class="row"><button class="btn" data-action="copy-bag">Copy this bag${RealBag.supported ? " for Chrome" : ""}</button><button class="btn" data-action="paste-bag">Paste${RealBag.supported ? "" : " from Bluefy"}</button></div>
+      ${RealBag.supported && IS_IOS ? `<button class="btn primary" data-action="send-chrome">Send to Chrome</button>` : ""}
+      <div class="row"><button class="btn" data-action="copy-bag">Copy this bag</button><button class="btn" data-action="paste-bag">Paste${RealBag.supported ? "" : " from Bluefy"}</button></div>
       ${S.view.showCopy ? `<textarea id="copyBag" readonly style="min-height:90px;font-size:12px"></textarea>` : ""}
       ${S.view.showPaste ? `<textarea id="pasteBag" placeholder="Paste here" style="min-height:90px;font-size:12px"></textarea>` : ""}
     </div>
@@ -1465,14 +1467,14 @@ function viewWelcome() {
   const step = S.view.step || "hello";
   // iPhone opened the tag's link in a browser without Bluetooth, and there's no bag here: the person's
   // Keepsake almost certainly lives in Bluefy. Say so, instead of offering to start a new, empty bag.
-  if (step === "hello" && S.ob.tag && IS_IOS && !RealBag.supported && !S.ob.tagHere) return `
-    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>That's your bag's tag.</h1>
-      <p>Your memories are in <b>Bluefy</b>, and your iPhone opened the tag in <b>${iosBrowserName()}</b>. Bring them over once, and from then on tapping the tag opens them right here.</p>
+  if (step === "hello" && (S.ob.tag || S.ob.fromBluefy) && IS_IOS && !RealBag.supported && !S.ob.tagHere) return `
+    <div class="stack onboard"><span class="eyebrow">Keepsake</span><h1>${S.ob.tag ? "That's your bag's tag." : "Your bag lives in Bluefy."}</h1>
+      <p>Your memories are in <b>Bluefy</b>. ${iosBrowserName()} opens them when you tap the bag's tag, once Bluefy has sent them here.</p>
       <div class="local"><ol class="steps">
-        <li>In Bluefy: <b>Settings &amp; privacy</b> → <b>Copy this bag for Chrome</b>.</li>
-        <li>Come back here and tap <b>Paste from Bluefy</b>.</li>
+        <li>In Bluefy, tap <b>Send to Chrome</b> (on the home screen, or in Settings &amp; privacy).</li>
+        <li>Or, if you copied the bag: tap <b>Paste from Bluefy</b> below.</li>
       </ol>
-      <p class="muted small" style="margin:0">Only sealed memories are copied. The key comes from the tag you just tapped.</p></div></div>
+      <p class="muted small" style="margin:0">Only sealed memories come over. The key comes from the bag's tag.</p></div></div>
     ${S.view.showPaste ? `<textarea id="pasteBag" placeholder="Paste here" style="min-height:90px;font-size:12px"></textarea>` : ""}
     <button class="btn primary" data-action="paste-bag">Paste from Bluefy</button>
     <button class="link" data-action="ob-tag-here" style="align-self:center">Start a new bag in ${iosBrowserName()} instead</button>`;
@@ -1481,7 +1483,8 @@ function viewWelcome() {
       <p>Seal a photo, your voice or a few words to the place where something happened.</p>
       <p>It waits there. Whoever carries this bag later can come back, tap it, and the memory opens.</p>
       <p class="muted">Each person who carries the bag adds a chapter.</p></div>
-    <button class="btn primary" data-ob="name">Begin</button>`;
+    <button class="btn primary" data-ob="name">Begin</button>
+    ${IS_IOS && !RealBag.supported ? `<button class="link" data-action="ob-from-bluefy" style="align-self:center">My bag is in Bluefy</button>` : ""}`;
   if (step === "name") return `
     <div class="stack onboard"><span class="eyebrow">1 of 3</span><h2>What's your name?</h2>
       <p class="muted">Your chapter is signed with it. You can change it later in Settings.</p>
@@ -1958,6 +1961,23 @@ function importBag(text) {
   S.data = { bag: { ...data.bag, key: null }, owners: data.owners, memories: mems, isExample: false, onboarded: true, imported: Date.now() };
   persist(); return mems.length;
 }
+/** This page's address as a link that opens in Chrome on iPhone (Chrome's documented googlechromes:// scheme). */
+function chromeLink(hash) {
+  const here = location.href.split("#")[0];
+  return here.replace(/^https:/, "googlechromes:").replace(/^http:/, "googlechrome:") + hash;
+}
+// A link's #fragment never reaches a server, so the sealed bag can ride in it. Very large bags (many photos)
+// go by clipboard instead, in case a huge link gets cut off on the way.
+const LINK_BAG_MAX = 1500000;
+async function sendBagToChrome() {
+  const text = bagTransferText();
+  try { await navigator.clipboard.writeText(text); } catch {} // backup, if the link route fails
+  S.data.copiedAt = Date.now(); persist();
+  const link = chromeLink(text.length <= LINK_BAG_MAX ? `#bag=${text}` : "#paste");
+  location.href = link;
+  setTimeout(() => { if (!document.hidden) { render(); toast("Chrome didn't open? Open Chrome yourself and go to Keepsake: it offers Paste from Bluefy.", 8000); } }, 2500);
+}
+
 async function readPastedBag() {
   const box = $("#pasteBag");
   if (box && box.value.trim()) return box.value;
@@ -2176,6 +2196,7 @@ document.addEventListener("click", async (e) => {
       S.preTapped = { at: Date.now(), real: true }; // Chrome's code stands for the tag tap
       return openMemory(m, false);
     }
+    case "send-chrome": return sendBagToChrome();
     case "copy-bag": {
       const text = bagTransferText();
       try { await navigator.clipboard.writeText(text); }
@@ -2216,6 +2237,7 @@ document.addEventListener("click", async (e) => {
     case "ob-allow": { const st = await Loc.start(); if (st === "denied") toast("No problem. You can turn location on later in Settings."); return obStep("bag"); }
     case "ob-example": return finishOnboarding(await makeExample(S.ob.name));
     case "ob-tag-here": S.ob.tagHere = true; return obStep("hello");
+    case "ob-from-bluefy": S.ob.fromBluefy = true; S.ob.tagHere = false; return obStep("hello");
     case "ob-tagbag": S.claimBag = { id: S.ob.tag.bagId, key: S.ob.tag.key }; S.data = null; S.view = { name: "claim", step: "name" }; render(); return;
     case "copy-tag": {
       const bag = S.claimBag || S.data.bag, link = tagUrl(bag).replace(/^https:\/\//, "");
@@ -2358,6 +2380,20 @@ function retireTab() {
   if (!Native) tabs?.postMessage({ type: "newest", id: TAB_ID });
   renderSim();
   const saved = await loadState();
+  const sent = /^#bag=(KEEPSAKE1\.[A-Za-z0-9_-]+)$/.exec(location.hash) || (location.hash === "#paste" ? [] : null);
+  if (sent) {
+    // Bluefy sent the bag here: add it, then straight to the bag. No introduction, no setup.
+    history.replaceState(null, "", location.pathname + location.search);
+    IntroEachTab.firstInThisTab();
+    if (saved?.onboarded && saved.bag?.id) S.data = saved;
+    Bag.el.hidden = true; Bag.isOpen = true; $("#shell").inert = false;
+    let n = null, err = "";
+    try { n = importBag(sent[1] || (await navigator.clipboard.readText().catch(() => ""))); } catch (e) { err = e.message; }
+    if (n === null) { S.ob.fromBluefy = true; S.view = { name: "welcome", step: "hello" }; if (S.data) S.view = { name: "privacy", showPaste: true }; render(); return toast(err || "Tap Paste from Bluefy to add the bag.", 7000); }
+    S.view = { name: "home" }; render(); bagFace();
+    if (Loc.wasAllowed()) Loc.start();
+    return toast(`${n ? `${n} new memor${n === 1 ? "y" : "ies"} ready here.` : "Already up to date."} Tap ◀ Bluefy at the top left to go back for the walk.`, 8000);
+  }
   const tag = LinkTags.initial(); // this page was opened by a tag tap: its time counts from navigation start
   startNfc(); // Chrome on Android, once NFC was allowed: read the tag in place from now on
   if (!saved?.onboarded || !saved.bag?.id) {
@@ -2370,7 +2406,8 @@ function retireTab() {
   }
   S.data = saved;
   if (tag) { IntroEachTab.firstInThisTab(); if (Loc.wasAllowed()) Loc.start(); return onTagTap(tag); }
-  if (IntroEachTab.on && IntroEachTab.firstInThisTab()) {
+  // Not in an iPhone browser without Bluetooth (Chrome): that one only opens memories from the tag.
+  if (IntroEachTab.on && !(IS_IOS && !RealBag.supported) && IntroEachTab.firstInThisTab()) {
     // Demo: the introduction, then the bag closes and opens with the clasp. The bag and memories are untouched.
     if (realBagPaired() && !RealBag.needsTap) RealBag.connect();
     if (Loc.wasAllowed()) Loc.start();
