@@ -666,7 +666,7 @@ async function toggleRecording() {
 const CONFIG = window.KEEPSAKE_CONFIG;
 // Where the tag's link points: the config's tagHost, or this app's own address when it's served over https.
 const TAG_HOST = CONFIG.tagHost || (location.protocol === "https:" ? new URL("./", location.href).href : "https://keepsake-bag.expo.app/");
-const BUILD = "2026-11-18.code3"; // bump on every release (the service worker cache name follows it in sw.js)
+const BUILD = "2026-11-18.code4"; // bump on every release (the service worker cache name follows it in sw.js)
 const tagUrl = (bag) => TagReader.linkFor(TAG_HOST, bag);
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1203,7 +1203,7 @@ function viewHome() {
       <button class="btn" data-action="tag-open">Set up the tag</button>
     </section>`;
   if (realBagPaired() && RealBag.state !== "connected") html += bleStatusBlock();
-  if (waiting && IS_IOS && RealBag.supported && !S.data.isExample && !S.waitTap) html += codeBox("unlock-code-here");
+  if (memories.length && S.data.bag.key && !S.waitTap) html += codeBox("unlock-code-here");
   if (!realBagPaired()) html += `<section class="pocket stack" aria-label="Your bag's buzzer">
       <div class="chapter-head"><h3>Connect your bag's buzzer</h3><span class="muted small">Bluetooth</span></div>
       ${RealBag.supported
@@ -1335,10 +1335,10 @@ function viewMemory() {
         <h3>Sealed ${kindWord[m.kind]}</h3>
         <p class="muted">${status}</p>
       </div></div>`;
+    if (S.data.bag.key && !S.waitTap) h += codeBox("unlock-code", m.id);
     if (S.waitTap) h += tagPrompt(S.waitTap.label);
     else if (c.inside && m.armed !== false) h += tagPrompt("Tap your phone to the bag's tag to open it");
     if (realBagPaired() && RealBag.state !== "connected") h += bleStatusBlock();
-    if (S.data.bag.key && !S.data.isExample && IS_IOS) h += codeBox("unlock-code", m.id);
     if (S.view.notHere) h += `<div class="notice bad" role="alert">${S.view.notHere === "unarmed" ? "This memory was sealed here a moment ago. It stays closed until you've left and come back." : S.view.notHere === "unknown" ? "Keepsake doesn't know where you are yet. Check that location is on, then try again." : `Not here yet. This memory opens within ${m.radius} m of ${esc(m.place.name)}, and you're ${fmtDist(c.dist)} away.`}</div>`;
     return h;
   }
